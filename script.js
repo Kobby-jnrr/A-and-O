@@ -1,4 +1,4 @@
-const BUSINESS_WHATSAPP_NUMBER = "233599907434"; // country code + number, no + or spaces
+const BUSINESS_WHATSAPP_NUMBER = "23351110013";
 const BUSINESS_EMAIL = "orders@aoandbeverages.com";
 
 const PRODUCTS = [

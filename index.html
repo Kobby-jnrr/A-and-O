@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>A and O Beverages, Bakes and More</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Public+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- ================= NAV ================= -->
+    <nav class="nav">
+      <div class="nav-inner">
+        <div class="brand">A and O <span>Beverages, Bakes and More</span></div>
+        <ul class="nav-links">
+          <li><a href="#beverages">Beverages</a></li>
+          <li><a href="#bakes">Bakes</a></li>
+          <li><a href="#about">About</a></li>
+          <li><a href="#how-to-order">How to order</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+        <div class="nav-right">
+          <button class="cart-btn" id="cartBtn" aria-label="Open order">
+            Order <span class="cart-count" id="cartCount">0</span>
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ================= HERO ================= -->
+    <header class="hero">
+      <div class="hero-ring"></div>
+      <div class="hero-orb orb-1"></div>
+      <div class="hero-orb orb-2"></div>
+      <div class="hero-orb orb-3"></div>
+      <div class="wrap hero-grid">
+        <div>
+          <div class="hero-eyebrow-line"></div>
+          <h1>
+            <span class="hero-line"><span>Baked warm.</span></span>
+            <span class="hero-line"><span>Poured fresh.</span></span>
+            <span class="hero-line"><span>Made your way.</span></span>
+          </h1>
+          <p class="lede">
+            A and O Beverages, Bakes and More is a small-batch kitchen serving
+            four beverages right now — each one fully customizable, made
+            properly, and ready when you are. Bakes are on the way.
+          </p>
+          <div class="hero-actions">
+            <a href="#beverages" class="btn btn-primary">See the menu</a>
+            <a href="#how-to-order" class="btn btn-ghost">How ordering works</a>
+          </div>
+        </div>
+        <div class="hero-panel">
+          <div class="hero-panel-row">
+            <span>Today's menu</span><span>4 beverages</span>
+          </div>
+          <div class="hero-panel-row">
+            <span>Customize</span><span>Pick size, flavor and more</span>
+          </div>
+          <div class="hero-panel-row">
+            <span>Order by</span><span>WhatsApp or email</span>
+          </div>
+          <div class="hero-panel-row">
+            <span>Serving</span><span>Pickup and delivery</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ================= MARQUEE ================= -->
+    <div class="marquee">
+      <div class="marquee-track">
+        <span>Beverages</span><span>Bakes</span><span>Fully customizable</span
+        ><span>Made to order</span> <span>Beverages</span><span>Bakes</span
+        ><span>Fully customizable</span><span>Made to order</span>
+      </div>
+    </div>
+
+    <!-- ================= BEVERAGES ================= -->
+    <section class="section-panel" id="beverages">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <h2>Beverages, for now</h2>
+          <p>
+            Four beverages today, more on the way. Open any item to pick a size,
+            flavor, or style before it goes in your order.
+          </p>
+        </div>
+        <div class="product-list" id="productList"></div>
+        <p class="placeholder-note">
+          <i>More Products coming soon!</i>
+        </p>
+      </div>
+    </section>
+
+    <!-- ================= BAKES ================= -->
+    <section class="section-page" id="bakes">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <h2>Bakes</h2>
+          <p>Our bakes menu is on its way — check back soon.</p>
+        </div>
+        <div class="coming-soon-panel reveal">
+          <h3>Coming soon</h3>
+          <p>
+            We're still perfecting our bakes lineup. In the meantime, take a
+            look at our beverages above.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= ABOUT ================= -->
+    <section class="section-page" id="about">
+      <div class="wrap about-grid">
+        <h2 class="reveal-side">A kitchen, not a factory</h2>
+        <div class="about-copy reveal-side">
+          <p>
+            A and O Beverages, Bakes and More started as a way of doing a small
+            number of things well rather than a long menu done carelessly. Every
+            item is made in small batches and finished the same day it's
+            ordered.
+          </p>
+          <p>
+            It all started in a home kitchen with a simple, unmistakable goal:
+            to celebrate authentic local flavors with uncompromised quality and
+            hygiene. Every beverage and bake is a labor of care—crafted to
+            deliver pure comfort, vibrant local taste, and wholesome nutrition
+            in every serving.
+          </p>
+          <div class="stat-row">
+            <div>
+              <span class="stat-num" data-count="4">0</span
+              ><span class="stat-label">Beverages, growing</span>
+            </div>
+            <div>
+              <span class="stat-num" data-count="100" data-suffix="%">0</span
+              ><span class="stat-label">Made to order</span>
+            </div>
+            <div>
+              <span class="stat-num" data-count="2">0</span
+              ><span class="stat-label">Ways to order</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= HOW TO ORDER ================= -->
+    <section class="section-panel" id="how-to-order">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <h2>How ordering works</h2>
+          <p>No accounts, no checkout page. Your order goes straight to us.</p>
+        </div>
+        <div class="steps" id="stepsGrid">
+          <div class="step-line" id="stepLine"></div>
+          <div class="step reveal">
+            <div class="step-num">1</div>
+            <h3>Browse and customize</h3>
+            <p>
+              Pick from the beverages above, choose a size, flavor or style, set
+              quantities.
+            </p>
+          </div>
+          <div class="step reveal">
+            <div class="step-num">2</div>
+            <h3>Open your order</h3>
+            <p>Everything you've added sits in the order panel, top right.</p>
+          </div>
+          <div class="step reveal">
+            <div class="step-num">3</div>
+            <h3>Add your details</h3>
+            <p>Name, phone number, and whether it's pickup or delivery.</p>
+          </div>
+          <div class="step reveal">
+            <div class="step-num">4</div>
+            <h3>Send it our way</h3>
+            <p>
+              Choose WhatsApp or email — it opens pre-filled, ready to send.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= CONTACT ================= -->
+    <section class="section-page" id="contact">
+      <div class="wrap contact-grid">
+        <div class="reveal-side">
+          <h2>Questions before you order?</h2>
+          <p style="color: var(--text-dim); font-size: 15px">
+            Reach out directly — we're a small team and we answer ourselves.
+          </p>
+          <ul class="contact-list">
+            <li><span>Phone / WhatsApp</span><span>+233 00 000 0000</span></li>
+            <li><span>Email</span><span>orders@aoandbeverages.com</span></li>
+            <li><span>Location</span><span>Kumasi, Ghana</span></li>
+          </ul>
+        </div>
+        <div class="reveal-side hero-panel">
+          <div class="hero-panel-row">
+            <span>Pickup hours</span><span>9am &ndash; 6pm</span>
+          </div>
+          <div class="hero-panel-row">
+            <span>Delivery hours</span><span>10am &ndash; 5pm</span>
+          </div>
+          <div class="hero-panel-row">
+            <span>Days open</span><span>Tue &ndash; Sun</span>
+          </div>
+          <div class="hero-panel-row">
+            <span>Instagram</span><span>@aoandbeverages</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="wrap footer-row">
+        <span>A and O Beverages, Bakes and More</span>
+        <span>&copy; 2026. All rights reserved.</span>
+      </div>
+    </footer>
+
+    <!-- ================= ORDER DRAWER ================= -->
+    <div class="backdrop" id="backdrop"></div>
+    <aside class="drawer" id="drawer" aria-label="Your order">
+      <div class="drawer-head">
+        <h3>Your order</h3>
+        <button class="drawer-close" id="drawerClose" aria-label="Close">
+          &times;
+        </button>
+      </div>
+      <div class="drawer-body">
+        <div id="cartList"></div>
+      </div>
+      <form class="drawer-form" id="orderForm">
+        <div class="drawer-total">
+          <span>Total</span>
+          <span class="price" id="cartTotal">GHS 0</span>
+        </div>
+        <div class="field">
+          <label for="custName">Full name</label>
+          <input type="text" id="custName" required placeholder="Your name" />
+        </div>
+        <div class="field">
+          <label for="custPhone">Phone number</label>
+          <input
+            type="tel"
+            id="custPhone"
+            required
+            placeholder="e.g. 024 000 0000"
+          />
+        </div>
+        <div class="field">
+          <label for="custMethod">Pickup or delivery</label>
+          <select id="custMethod">
+            <option value="Pickup">Pickup</option>
+            <option value="Delivery">Delivery</option>
+          </select>
+        </div>
+        <div class="field" id="addressField" style="display: none">
+          <label for="custAddress">Delivery address</label>
+          <textarea
+            id="custAddress"
+            rows="2"
+            placeholder="Where should we deliver?"
+          ></textarea>
+        </div>
+        <div class="order-btn-row">
+          <button type="button" class="order-btn whatsapp" id="whatsappBtn">
+            Order via WhatsApp
+          </button>
+          <button type="button" class="order-btn email" id="emailBtn">
+            Order via email
+          </button>
+        </div>
+        <div class="confirm-msg" id="confirmMsg">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path
+              d="M4 12l5 5L20 6"
+              stroke="#2F6FED"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span
+            >Complete sending the message in the app that just opened to finish
+            your order.</span
+          >
+        </div>
+      </form>
+    </aside>
+
+    <script src="script.js"></script>
+  </body>
+</html>

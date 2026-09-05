@@ -11,8 +11,8 @@ const PRODUCTS = [
       "A rich, authentic traditional blend of smooth fermented yoghurt and slow-cooked millet, accented with sweet coconut flakes and wholesome tigernut.",
     image:
       "https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=300&q=80",
-    size: "350 ml",
-    price: 25,
+    size: "300 ml",
+    price: 20,
     ingredients: [
       { id: "yoghurt", name: "Yoghurt" },
       { id: "millet", name: "Millet" },
@@ -57,6 +57,11 @@ const PRODUCTS = [
       { id: "red grapes", name: "Red Grapes" },
       { id: "mangoes", name: "Mangoes" },
       { id: "coconut flakes", name: "Coconut Flakes" },
+    ],
+    Cyrup: [
+      { id: "mangoeocyrup", name: "Mangoe Cyrup" },
+      { id: "pineaapplecyrup", name: "Pineaapple Cyrup" },
+      { id: "honey", name: "Honey" },
     ],
   },
   {
@@ -104,7 +109,11 @@ PRODUCTS.forEach((p) => {
       sweetnessId: p.sweetness[0].id,
     };
   } else if (p.type === "classic-custom") {
-    selectionState[p.id] = { mode: "classic", removed: new Set() };
+    selectionState[p.id] = {
+      mode: "classic",
+      removed: new Set(),
+      toppingId: "none",
+    };
   } else {
     selectionState[p.id] = {};
   }
@@ -113,8 +122,15 @@ PRODUCTS.forEach((p) => {
 function computeUnitPrice(product, sel) {
   switch (product.type) {
     case "fixed":
-    case "classic-custom":
       return product.price;
+    case "classic-custom": {
+      const topping =
+        product.Cyrup && sel.toppingId && sel.toppingId !== "none"
+          ? product.Cyrup.find((t) => t.id === sel.toppingId)
+          : null;
+      const toppingPrice = (topping && topping.price) || 0;
+      return product.price + toppingPrice;
+    }
     case "flavor-size": {
       const size =
         product.sizes.find((s) => s.id === sel.sizeId) || product.sizes[0];
@@ -146,17 +162,22 @@ function lineDescription(product, entry) {
       return [size?.label, sweet?.name].filter(Boolean).join(" · ");
     }
     case "classic-custom": {
+      const topping =
+        product.Cyrup && entry.toppingId && entry.toppingId !== "none"
+          ? product.Cyrup.find((t) => t.id === entry.toppingId)
+          : null;
+      const toppingText = topping ? ` + ${topping.name}` : "";
+
       if (entry.mode === "classic") {
-        return `Classic · ${product.size}`;
+        return `Classic${toppingText} · ${product.size}`;
       }
       const removedNames = (entry.removed || [])
         .map((id) => product.ingredients.find((i) => i.id === id)?.name)
         .filter(Boolean);
-      const base = "Customized";
       const removedText = removedNames.length
         ? ` (No ${removedNames.join(", ")})`
         : "";
-      return `${base}${removedText} · ${product.size}`;
+      return `Customized${removedText}${toppingText} · ${product.size}`;
     }
     default:
       return "";
@@ -183,25 +204,44 @@ function getToggleLabel(product) {
 ============================================================ */
 const productList = document.getElementById("productList");
 
+function renderBulletList(ingredients) {
+  const items = ingredients
+    .map(
+      (ing) => `
+    <li class="ingredient-item bullet readonly-item" data-type="readonly">
+      <span class="bullet-dot"></span>
+      <span class="ingredient-label">${ing.name}</span>
+    </li>
+  `,
+    )
+    .join("");
+  return `<ul class="ingredient-list">${items}</ul>`;
+}
+
+function renderCheckboxList(ingredients, removedSet) {
+  const items = ingredients
+    .map((ing) => {
+      const isRemoved = removedSet.has(ing.id);
+      return `
+      <li class="ingredient-item ${isRemoved ? "removed" : "checked"}" data-type="custom-ing" data-id="${ing.id}">
+        <span class="chk">${CHECK_ICON}</span>
+        <span class="ingredient-label">${ing.name}</span>
+      </li>
+    `;
+    })
+    .join("");
+  return `<ul class="ingredient-list">${items}</ul>`;
+}
+
 function renderCustomizePanel(product) {
   const sel = selectionState[product.id];
 
   if (product.type === "fixed") {
-    const items = product.ingredients
-      .map(
-        (ing) => `
-      <li class="ingredient-item checked readonly-item" data-type="readonly">
-        <span class="chk">${CHECK_ICON}</span>
-        <span class="ingredient-label">${ing.name}</span>
-      </li>
-    `,
-      )
-      .join("");
     return `
       <div class="customize-inner single">
         <div class="ingredient-group">
           <h4>Ingredients</h4>
-          <ul class="ingredient-list">${items}</ul>
+          ${renderBulletList(product.ingredients)}
           <p class="readonly-note">Ingredients are fixed and not customizable.</p>
         </div>
       </div>
@@ -272,27 +312,15 @@ function renderCustomizePanel(product) {
   }
 
   if (product.type === "classic-custom") {
-    const classicItems = product.ingredients
-      .map(
-        (ing) => `
-      <li class="ingredient-item checked readonly-item" data-type="readonly">
-        <span class="chk">${CHECK_ICON}</span>
-        <span class="ingredient-label">${ing.name}</span>
-      </li>
-    `,
-      )
-      .join("");
-    const customItems = product.ingredients
-      .map((ing) => {
-        const isRemoved = sel.removed.has(ing.id);
-        return `
-      <li class="ingredient-item ${isRemoved ? "removed" : "checked"}" data-type="custom-ing" data-id="${ing.id}">
-        <span class="chk">${CHECK_ICON}</span>
-        <span class="ingredient-label">${ing.name}</span>
-      </li>
-    `;
-      })
-      .join("");
+    const toppings = product.Cyrup || [];
+    const toppingBtns = [
+      `<button type="button" class="pill-btn ${!sel.toppingId || sel.toppingId === "none" ? "active" : ""}" data-topping="none">None</button>`,
+      ...toppings.map(
+        (t) =>
+          `<button type="button" class="pill-btn ${sel.toppingId === t.id ? "active" : ""}" data-topping="${t.id}">${t.name}</button>`,
+      ),
+    ].join("");
+
     return `
       <div class="customize-inner single">
         <div class="option-group">
@@ -302,14 +330,18 @@ function renderCustomizePanel(product) {
             <button type="button" class="pill-btn ${sel.mode === "custom" ? "active" : ""}" data-mode="custom">Customized</button>
           </div>
         </div>
+        <div class="option-group">
+          <h4>Topping (choose one, optional)</h4>
+          <div class="pill-row">${toppingBtns}</div>
+        </div>
         <div class="ingredient-group" style="display:${sel.mode === "classic" ? "block" : "none"}">
           <h4>Includes</h4>
-          <ul class="ingredient-list">${classicItems}</ul>
+          ${renderBulletList(product.ingredients)}
           <p class="readonly-note">Classic ingredients are fixed and not customizable.</p>
         </div>
         <div class="ingredient-group" style="display:${sel.mode === "custom" ? "block" : "none"}">
           <h4>Tap to remove</h4>
-          <ul class="ingredient-list">${customItems}</ul>
+          ${renderCheckboxList(product.ingredients, sel.removed)}
         </div>
       </div>
     `;
@@ -385,13 +417,14 @@ productList.addEventListener("click", (e) => {
     return;
   }
 
-  // pill selections (flavor / size / sweetness / classic-custom mode)
+  // pill selections (flavor / size / sweetness / classic-custom mode / topping)
   const pillBtn = e.target.closest(".pill-btn");
   if (pillBtn) {
     if (pillBtn.dataset.flavor) sel.flavorId = pillBtn.dataset.flavor;
     if (pillBtn.dataset.size) sel.sizeId = pillBtn.dataset.size;
     if (pillBtn.dataset.sweetness) sel.sweetnessId = pillBtn.dataset.sweetness;
     if (pillBtn.dataset.mode) sel.mode = pillBtn.dataset.mode;
+    if (pillBtn.dataset.topping) sel.toppingId = pillBtn.dataset.topping;
     refreshRow(productId);
     return;
   }
@@ -527,7 +560,7 @@ function buildCartKey(entry) {
     case "size-sweetness":
       return `${entry.productId}::s(${entry.sizeId})::sw(${entry.sweetnessId})`;
     case "classic-custom":
-      return `${entry.productId}::m(${entry.mode})::r(${[...entry.removed].sort().join(",")})`;
+      return `${entry.productId}::m(${entry.mode})::r(${[...entry.removed].sort().join(",")})::t(${entry.toppingId})`;
     default:
       return entry.productId;
   }
@@ -546,6 +579,7 @@ function addProductToCart(product, rowEl) {
   } else if (product.type === "classic-custom") {
     entry.mode = sel.mode;
     entry.removed = [...sel.removed];
+    entry.toppingId = sel.toppingId;
   }
 
   const key = buildCartKey(entry);

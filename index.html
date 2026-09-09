@@ -11,6 +11,118 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
+
+    <style>
+      /* Delivery location controls */
+      .delivery-location-field textarea {
+        width: 100%;
+        box-sizing: border-box;
+        resize: vertical;
+      }
+
+      .location-divider {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 14px 0;
+        color: var(--text-dim, #777);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+      }
+
+      .location-divider::before,
+      .location-divider::after {
+        content: "";
+        height: 1px;
+        flex: 1;
+        background: currentColor;
+        opacity: 0.25;
+      }
+
+      .share-location-btn {
+        width: 100%;
+        min-height: 46px;
+        border: 1px solid rgba(47, 111, 237, 0.25);
+        border-radius: 10px;
+        background: rgba(47, 111, 237, 0.07);
+        color: #2f6fed;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        padding: 11px 14px;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+        transition:
+          transform 0.18s ease,
+          background 0.18s ease,
+          border-color 0.18s ease,
+          opacity 0.18s ease;
+      }
+
+      .share-location-btn:hover:not(:disabled) {
+        background: rgba(47, 111, 237, 0.12);
+        border-color: rgba(47, 111, 237, 0.4);
+        transform: translateY(-1px);
+      }
+
+      .share-location-btn:focus-visible {
+        outline: 3px solid rgba(47, 111, 237, 0.2);
+        outline-offset: 2px;
+      }
+
+      .share-location-btn:disabled {
+        cursor: wait;
+        opacity: 0.65;
+      }
+
+      .share-location-btn.captured {
+        background: rgba(42, 160, 105, 0.09);
+        border-color: rgba(42, 160, 105, 0.3);
+        color: #278b5c;
+      }
+
+      .share-location-icon {
+        font-size: 18px;
+        line-height: 1;
+      }
+
+      .location-status {
+        display: none;
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 9px;
+        background: rgba(42, 160, 105, 0.08);
+        color: #277b56;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .location-status.show {
+        display: block;
+      }
+
+      .location-status.error {
+        background: rgba(190, 65, 65, 0.08);
+        color: #a83e3e;
+      }
+
+      .location-status a {
+        color: inherit;
+        font-weight: 700;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+
+      .location-help {
+        margin: 9px 0 0;
+        color: var(--text-dim, #777);
+        font-size: 11px;
+        line-height: 1.5;
+      }
+    </style>
   </head>
   <body>
     <!-- ================= NAV ================= -->
@@ -181,7 +293,7 @@
           <p>No accounts, no checkout page. Your order goes straight to us.</p>
         </div>
         <img
-          src="webpic.png"
+          src="Home.jpg"
           alt="A phone on a table, ready to send an order"
           class="panel-photo panel-photo-wide reveal"
           style="margin-bottom: 15px; border-radius: var(--radius-m)"
@@ -295,13 +407,44 @@
             <option value="Delivery">Delivery</option>
           </select>
         </div>
-        <div class="field" id="addressField" style="display: none">
+        <div
+          class="field delivery-location-field"
+          id="addressField"
+          style="display: none"
+        >
           <label for="custAddress">Delivery address</label>
           <textarea
             id="custAddress"
-            rows="2"
-            placeholder="Where should we deliver?"
+            rows="3"
+            placeholder="Enter your delivery address, area, landmark, etc."
+            autocomplete="street-address"
           ></textarea>
+
+          <div class="location-divider" aria-hidden="true">
+            <span>OR</span>
+          </div>
+
+          <button
+            type="button"
+            class="share-location-btn"
+            id="shareLocationBtn"
+            aria-describedby="locationHelp"
+          >
+            <span class="share-location-icon" aria-hidden="true">📍</span>
+            <span id="shareLocationBtnText">Use my current location</span>
+          </button>
+
+          <div
+            class="location-status"
+            id="locationStatus"
+            role="status"
+            aria-live="polite"
+          ></div>
+
+          <p class="location-help" id="locationHelp">
+            Type your address or use your current location to add a precise map
+            pin to your order.
+          </p>
         </div>
         <div class="order-btn-row">
           <button type="button" class="order-btn whatsapp" id="whatsappBtn">

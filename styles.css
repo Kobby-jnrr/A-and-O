@@ -719,6 +719,18 @@ section {
   max-width: 460px;
 }
 
+/* Inline pre-order note that can appear inside .product-desc
+   (see PRODUCTS[].description in script.js for Parfait / Greek Yoghurt) */
+.preorder-note {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 600;
+  color: var(--accent-deep);
+  line-height: 1.5;
+}
+
 .customize-toggle {
   display: inline-flex;
   align-items: center;
@@ -798,7 +810,7 @@ section {
 }
 
 .product-row.open .customize-panel {
-  max-height: 520px;
+  max-height: 700px;
 }
 
 .customize-inner {
@@ -830,6 +842,25 @@ section {
   color: var(--text-dim);
   margin-bottom: 10px;
   font-weight: 600;
+}
+
+/* Pre-order schedule banner (renderPreOrderBanner / renderPreOrderBannerGreek) */
+.ingredient-group.preorder-banner {
+  background: var(--bg-panel-2);
+  border: 1px solid var(--accent-soft);
+  border-radius: var(--radius-s);
+  padding: 14px 16px;
+}
+.preorder-banner-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-deep);
+  margin: 0 0 4px;
+}
+.preorder-banner-sub {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin: 0;
 }
 
 .ingredient-list {
@@ -875,6 +906,15 @@ section {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Read-only bulleted rows (renderBulletList — fixed ingredients) */
+.bullet-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  flex-shrink: 0;
 }
 
 .chk {
@@ -930,6 +970,10 @@ section {
   cursor: default;
 }
 
+.ingredient-item.tappable {
+  cursor: pointer;
+}
+
 .ingredient-label {
   flex-grow: 1;
 }
@@ -945,7 +989,7 @@ section {
   font-style: italic;
 }
 
-/* ---- pill / segmented selectors (flavor, size, sweetness, style) ---- */
+/* ---- pill / segmented selectors (flavor, size, sweetness, syrup) ---- */
 .pill-row {
   display: flex;
   flex-wrap: wrap;
@@ -1164,6 +1208,109 @@ section {
   font-size: 14.5px;
   max-width: 420px;
   margin: 0 auto;
+}
+
+/* Bakes preview grid (Meat Pie / Banana Bread / Spring Rolls / Small Chops) */
+.bakes-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin-top: 32px;
+}
+@media (max-width: 700px) {
+  .bakes-preview-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .bake-preview-image {
+    height: 150px;
+  }
+}
+
+@media (max-width: 480px) {
+  .bakes-preview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bake-preview-image {
+    height: 200px;
+  }
+}
+
+.bake-preview-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  padding: 0;
+  text-align: center;
+  overflow: hidden;
+  transition:
+    transform 0.3s var(--ease),
+    border-color 0.3s var(--ease),
+    box-shadow 0.3s var(--ease);
+}
+.bake-preview-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent-soft);
+  box-shadow: 0 10px 24px rgba(18, 43, 82, 0.08);
+}
+
+.bake-preview-icon {
+  font-size: 30px;
+  margin-bottom: 10px;
+}
+
+.bake-preview-card h4 {
+  font-family: "Public Sans", sans-serif;
+  font-style: normal;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 10px;
+  color: var(--text-strong);
+}
+
+.bake-preview-image {
+  width: 100%;
+  height: 190px;
+  overflow: hidden;
+  background: var(--bg-page-2);
+}
+
+.bake-preview-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s var(--ease);
+}
+
+.bake-preview-card:hover .bake-preview-image img {
+  transform: scale(1.05);
+}
+
+.bake-preview-content {
+  padding: 20px 16px 24px;
+  text-align: center;
+}
+
+.bake-preview-content .product-cat {
+  margin-bottom: 4px;
+}
+
+.bake-preview-content h4 {
+  margin-bottom: 10px;
+}
+
+.soon-badge {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--secondary);
+  background: rgba(26, 166, 179, 0.1);
+  padding: 4px 10px;
+  border-radius: 999px;
 }
 
 /* ============================================================
@@ -1438,29 +1585,6 @@ footer {
   margin-top: 3px;
 }
 
-.qty-control {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-s);
-  padding: 4px 8px;
-}
-.qty-control button {
-  font-size: 15px;
-  width: 18px;
-  color: var(--text-strong);
-  transition: color 0.2s var(--ease);
-}
-.qty-control button:hover {
-  color: var(--accent);
-}
-.qty-control span {
-  font-size: 13px;
-  min-width: 14px;
-  text-align: center;
-}
-
 .remove-btn {
   font-size: 12px;
   color: var(--secondary);
@@ -1481,6 +1605,37 @@ footer {
   padding: 20px 24px;
   border-top: 1px solid var(--line);
 }
+
+/* Payment-before-delivery notice inside the drawer */
+.payment-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--bg-panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  padding: 12px 14px;
+  margin-bottom: 18px;
+}
+.payment-note-icon {
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.payment-note strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-strong);
+  margin-bottom: 4px;
+}
+.payment-note p {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin: 0;
+  line-height: 1.5;
+}
+
 .field {
   margin-bottom: 14px;
 }

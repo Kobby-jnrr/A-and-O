@@ -29,7 +29,7 @@ const PRODUCTS = [
     image:
       "https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=300&q=80",
     flavors: [
-      { id: "Vanilla", name: "Vanilla" },
+      { id: "plain", name: "Plain" },
       { id: "strawberry", name: "Strawberry" },
     ],
     sizes: [
@@ -45,11 +45,11 @@ const PRODUCTS = [
     type: "parfait-custom",
     preOrder: true,
     description:
-      "Indulgent layers of rich yoghurt, wholesome granolas, and custom fruit mixtures.\n<i><b>Pre-order for Wednesday & Saturday delivery.\nOrder by Tuesday 1 PM or Friday 1 PM.</b></i>",
+      'Indulgent layers of rich yoghurt, wholesome granolas, and custom fruit mixtures.\n<span class="preorder-note">Pre-order for Wednesday &amp; Saturday delivery.<br>Order by Tuesday 1 PM or Friday 1 PM.</span>',
     image:
       "https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=300&q=80",
     //size: "350 ml",
-    price: 25,
+    price: 40,
     constants: [{ id: "yoghurt", name: "Yoghurt" }],
     freeToppings: [
       { id: "granola", name: "Granola (Free)" },
@@ -76,7 +76,7 @@ const PRODUCTS = [
     type: "size-sweetness",
     preOrder: true,
     description:
-      "Ultra-thick, velvety, and high in protein. Pure strained yoghurt available sweetened or completely unsweetened for a healthier option.\n<i><b>Pre-order for Tuesday & Friday delivery.\nOrder by Monday 1 PM or Thursday 1 PM.</b></i>",
+      'Ultra-thick, velvety, and high in protein. Pure strained yoghurt available sweetened or completely unsweetened for a healthier option.\n<span class="preorder-note">Pre-order for Tuesday &amp; Friday delivery.<br>Order by Monday 1 PM or Thursday 1 PM.</span>',
     image:
       "https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=300&q=80",
     sizes: [
@@ -92,7 +92,7 @@ const PRODUCTS = [
       {
         id: "unsweetened",
         name: "Unsweetened",
-        prices: { "500ml": 45, "1l": 95 },
+        prices: { "500ml": 45, "1l": 90 },
       },
     ],
   },
@@ -103,18 +103,11 @@ const CHECK_ICON =
 
 const CURRENCY = "GHS";
 
+const MAX_PARFAIT_FRUITS = 3;
+
 let cart = {};
 
 const selectionState = {};
-
-/*
-============================================================
-PRODUCT QUANTITY STATE
-============================================================
-Stores the quantity selected on each product card before
-the customer clicks "Add to order".
-============================================================
-*/
 
 const productQuantityState = {};
 
@@ -137,7 +130,11 @@ PRODUCTS.forEach((p) => {
     };
   } else if (p.type === "parfait-custom") {
     selectionState[p.id] = {
-      selectedToppings: new Set(["granola", "coconut_flakes"]),
+      /*
+        Nothing pre-selected — toppings and fruits
+        are both tap-to-add, just like the fruits list.
+      */
+      selectedToppings: new Set(),
       selectedFruits: new Set(),
       syrupId: "none",
     };
@@ -229,7 +226,7 @@ function lineDescription(product, entry) {
 
       const toppingsText = toppingsNames.length
         ? `Toppings: ${toppingsNames.join(", ")}`
-        : "";
+        : "No toppings selected";
 
       return [fruitsText, toppingsText, syrupText].filter(Boolean).join(" · ");
     }
@@ -292,11 +289,11 @@ function renderBulletList(ingredients) {
 
 function renderPreOrderBanner() {
   return `
-    <div class="ingredient-group" style="background: rgba(0, 102, 204, 0.05); padding: 10px; border-radius: 8px; border-left: 4px solid #0066cc; margin-bottom: 12px;">
-      <p style="margin: 0; font-size: 13px; font-weight: 600; color: #0066cc;">
-        📅 Pre-order Schedule: Delivered on Wednesdays & Saturdays.
+    <div class="ingredient-group preorder-banner">
+      <p class="preorder-banner-title">
+        📅 Pre-order Schedule: Delivered on Wednesdays &amp; Saturdays.
       </p>
-      <p style="margin: 4px 0 0 0; font-size: 12px; color: #555;">
+      <p class="preorder-banner-sub">
         Order by Tuesday 1 PM (for Wed delivery) or Friday 1 PM (for Sat delivery).
       </p>
     </div>
@@ -305,11 +302,11 @@ function renderPreOrderBanner() {
 
 function renderPreOrderBannerGreek() {
   return `
-    <div class="ingredient-group" style="background: rgba(0, 102, 204, 0.05); padding: 10px; border-radius: 8px; border-left: 4px solid #0066cc; margin-bottom: 12px;">
-      <p style="margin: 0; font-size: 13px; font-weight: 600; color: #0066cc;">
-        📅 Pre-order Schedule: Delivered on Tuesdays & Fridays.
+    <div class="ingredient-group preorder-banner">
+      <p class="preorder-banner-title">
+        📅 Pre-order Schedule: Delivered on Tuesdays &amp; Fridays.
       </p>
-      <p style="margin: 4px 0 0 0; font-size: 12px; color: #555;">
+      <p class="preorder-banner-sub">
         Order by Monday 1 PM (for Tuesday delivery) or Thursday 1 PM (for Friday delivery).
       </p>
     </div>
@@ -554,7 +551,7 @@ function renderCustomizePanel(product) {
 
         return `
           <li
-            class="ingredient-item ${isSelected ? "checked" : ""}"
+            class="ingredient-item tappable ${isSelected ? "checked" : ""}"
             data-type="parfait-topping"
             data-id="${top.id}"
           >
@@ -579,7 +576,7 @@ function renderCustomizePanel(product) {
 
         return `
           <li
-            class="ingredient-item ${isSelected ? "checked" : ""}"
+            class="ingredient-item tappable ${isSelected ? "checked" : ""}"
             data-type="parfait-fruit"
             data-id="${fruit.id}"
             style="display: flex; visibility: visible; opacity: 1;"
@@ -604,18 +601,22 @@ function renderCustomizePanel(product) {
           class="ingredient-group"
           style="margin-top:12px;"
         >
-          <h4>Free Toppings</h4>
+          <h4>Toppings (Tap to add)</h4>
 
           <ul class="ingredient-list">
             ${toppingsList}
           </ul>
+
+          <p class="readonly-note" style="margin-top:8px;">
+            Selected: ${sel.selectedToppings.size} / ${product.freeToppings.length}
+          </p>
         </div>
 
         <div
           class="ingredient-group"
           style="margin-top:12px;"
         >
-          <h4>Fruit Mixtures (Select up to 4)</h4>
+          <h4>Fruit Mixtures (Tap to select up to ${MAX_PARFAIT_FRUITS})</h4>
 
           <ul
             class="ingredient-list parfait-fruit-list"
@@ -634,7 +635,7 @@ function renderCustomizePanel(product) {
             class="readonly-note"
             style="margin-top:8px;"
           >
-            Selected: ${sel.selectedFruits.size} / 4
+            Selected: ${sel.selectedFruits.size} / ${MAX_PARFAIT_FRUITS}
           </p>
         </div>
 
@@ -902,6 +903,7 @@ if (productList) {
 
     /* --------------------------------------------------------
        PARFAIT FREE TOPPINGS
+       Tap to add / remove — nothing pre-selected.
     -------------------------------------------------------- */
 
     const toppingItem = e.target.closest('[data-type="parfait-topping"]');
@@ -922,7 +924,7 @@ if (productList) {
 
     /* --------------------------------------------------------
        PARFAIT FRUITS
-       Maximum = 4
+       Maximum = MAX_PARFAIT_FRUITS (3)
     -------------------------------------------------------- */
 
     const fruitItem = e.target.closest('[data-type="parfait-fruit"]');
@@ -933,8 +935,8 @@ if (productList) {
       if (sel.selectedFruits.has(id)) {
         sel.selectedFruits.delete(id);
       } else {
-        if (sel.selectedFruits.size >= 4) {
-          alert("You can select a maximum of 4 fruits.");
+        if (sel.selectedFruits.size >= MAX_PARFAIT_FRUITS) {
+          alert(`You can select a maximum of ${MAX_PARFAIT_FRUITS} fruits.`);
 
           return;
         }
@@ -1049,10 +1051,10 @@ if ("IntersectionObserver" in window) {
 }
 
 /* ============================================================
-   STAT COUNT-UP
+   STAT COUNT-UP (numeric stats only)
 ============================================================ */
 
-const statEls = document.querySelectorAll(".stat-num");
+const statEls = document.querySelectorAll(".stat-num[data-count]");
 
 if ("IntersectionObserver" in window) {
   const statObserver = new IntersectionObserver(
@@ -1719,6 +1721,8 @@ function buildOrderMessage() {
     `Customer: ${name}`,
     `Phone: ${phone}`,
     `${method === "Delivery" ? "Delivery" : "Pickup"}`,
+    "",
+    "Note: Payment is required before delivery/pickup.",
   ];
 
   if (method === "Delivery") {

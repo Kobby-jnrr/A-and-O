@@ -1,0 +1,906 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <meta
+      name="description"
+      content="A and O Beverages, Bakes and More — fresh yoghurt drinks, parfaits, Greek yoghurt and more."
+    />
+
+    <title>A and O Beverages, Bakes and More</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Public+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <!-- =========================================================
+         NAVIGATION
+    ========================================================== -->
+
+    <header class="nav">
+      <div class="nav-inner">
+        <a href="#home" class="brand"> A and O <span>Beverages</span> </a>
+
+        <nav aria-label="Main navigation">
+          <ul class="nav-links">
+            <li>
+              <a href="#home">Home</a>
+            </li>
+
+            <li>
+              <a href="#beverages">Beverages</a>
+            </li>
+
+            <li>
+              <a href="#bakes">Bakes</a>
+            </li>
+
+            <li>
+              <a href="#about">About</a>
+            </li>
+
+            <li>
+              <a href="#contact">Contact</a>
+            </li>
+          </ul>
+        </nav>
+
+        <div class="nav-actions">
+          <button
+            type="button"
+            class="track-nav-btn"
+            id="trackOrderBtn"
+            aria-label="Track your order"
+          >
+            Track Order
+          </button>
+
+          <button
+            type="button"
+            class="cart-btn"
+            id="cartBtn"
+            aria-label="Open your order"
+          >
+            <span>Order</span>
+            <span class="cart-count" id="cartCount">0</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- =========================================================
+         MAIN
+    ========================================================== -->
+
+    <main id="home">
+      <!-- =======================================================
+           HERO
+      ======================================================== -->
+
+      <section class="hero">
+        <div class="hero-ring" aria-hidden="true"></div>
+
+        <div class="hero-orb orb-1" aria-hidden="true"></div>
+        <div class="hero-orb orb-2" aria-hidden="true"></div>
+        <div class="hero-orb orb-3" aria-hidden="true"></div>
+
+        <div class="wrap">
+          <div class="hero-grid">
+            <div class="hero-content">
+              <div class="hero-eyebrow-line" aria-hidden="true"></div>
+
+              <h1>
+                <span class="hero-line">
+                  <span>Fresh.</span>
+                </span>
+
+                <span class="hero-line">
+                  <span>Simple.</span>
+                </span>
+
+                <span class="hero-line">
+                  <span>Made your way.</span>
+                </span>
+              </h1>
+
+              <p class="lede">
+                Fresh yoghurt drinks, indulgent parfaits, rich Greek yoghurt,
+                and more — made with care and served just the way you like it.
+              </p>
+
+              <div class="hero-actions">
+                <a href="#beverages" class="btn btn-primary">
+                  Explore beverages
+                </a>
+
+                <a href="#bakes" class="btn btn-ghost"> See our bakes </a>
+              </div>
+            </div>
+
+            <!-- Hero visual -->
+            <div class="hero-visual">
+              <div class="hero-image-card">
+                <img
+                  src="https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=900&q=85"
+                  alt="Fresh yoghurt parfait"
+                  loading="eager"
+                />
+
+                <div class="hero-image-caption">
+                  <span>Made fresh</span>
+                  <strong>with care.</strong>
+                </div>
+              </div>
+
+              <div class="hero-panel">
+                <div class="hero-panel-row">
+                  <span>Fresh yoghurt drinks</span>
+                  <strong>Daily</strong>
+                </div>
+
+                <div class="hero-panel-row">
+                  <span>Parfait</span>
+                  <strong>Pre-order</strong>
+                </div>
+
+                <div class="hero-panel-row">
+                  <span>Greek yoghurt</span>
+                  <strong>Pre-order</strong>
+                </div>
+
+                <div class="hero-panel-row">
+                  <span>Bakes</span>
+                  <strong>Coming soon</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =======================================================
+           MARQUEE
+      ======================================================== -->
+
+      <div class="marquee" aria-hidden="true">
+        <div class="marquee-track">
+          <span>Freshly made</span>
+          <span>Yoghurt drinks</span>
+          <span>Parfaits</span>
+          <span>Greek yoghurt</span>
+          <span>More coming soon</span>
+
+          <span>Freshly made</span>
+          <span>Yoghurt drinks</span>
+          <span>Parfaits</span>
+          <span>Greek yoghurt</span>
+          <span>More coming soon</span>
+        </div>
+      </div>
+
+      <!-- =======================================================
+           BEVERAGES
+      ======================================================== -->
+
+      <section class="section-panel" id="beverages">
+        <div class="wrap">
+          <div class="section-head reveal">
+            <div>
+              <h2>Beverages</h2>
+            </div>
+
+            <p>
+              Four beverages today, more on the way. Open any item to pick a
+              size, flavor, or style before it goes in your order.
+            </p>
+          </div>
+
+          <div class="product-list" id="productList"></div>
+
+          <p class="placeholder-note">
+            <i>More Products coming soon!</i>
+          </p>
+        </div>
+      </section>
+
+      <!-- =======================================================
+           BAKES
+      ======================================================== -->
+
+      <section class="section-page" id="bakes">
+        <div class="wrap">
+          <div class="section-head reveal">
+            <div>
+              <h2>Bakes</h2>
+            </div>
+
+            <p>
+              Our baked range is on the way. These favorites are coming soon.
+            </p>
+          </div>
+
+          <div class="bakes-preview-grid">
+            <!-- Meat Pie -->
+            <article class="bake-preview-card">
+              <div class="bake-preview-image">
+                <img src="public/meatpie.jpeg" alt="Meat pie" loading="lazy" />
+              </div>
+
+              <div class="bake-preview-content">
+                <div class="product-cat">Bakes</div>
+
+                <h4>Meat Pie</h4>
+
+                <span class="soon-badge">Coming soon</span>
+              </div>
+            </article>
+
+            <!-- Banana Bread -->
+            <article class="bake-preview-card">
+              <div class="bake-preview-image">
+                <img
+                  src="public/bananabread.jpg"
+                  alt="Banana bread"
+                  loading="lazy"
+                />
+              </div>
+
+              <div class="bake-preview-content">
+                <div class="product-cat">Bakes</div>
+
+                <h4>Banana Bread</h4>
+
+                <span class="soon-badge">Coming soon</span>
+              </div>
+            </article>
+
+            <!-- Spring Rolls -->
+            <article class="bake-preview-card">
+              <div class="bake-preview-image">
+                <img
+                  src="public/springrolls.jpg"
+                  alt="Spring rolls"
+                  loading="lazy"
+                />
+              </div>
+
+              <div class="bake-preview-content">
+                <div class="product-cat">Bakes</div>
+
+                <h4>Spring Rolls</h4>
+
+                <span class="soon-badge">Coming soon</span>
+              </div>
+            </article>
+
+            <!-- Small Chops -->
+            <article class="bake-preview-card">
+              <div class="bake-preview-image">
+                <img
+                  src="public/smallchops.jpg"
+                  alt="Small chops"
+                  loading="lazy"
+                />
+              </div>
+
+              <div class="bake-preview-content">
+                <div class="product-cat">Bakes</div>
+
+                <h4>Small Chops</h4>
+
+                <span class="soon-badge">Coming soon</span>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- =======================================================
+           ABOUT
+      ======================================================== -->
+
+      <section class="section-panel" id="about">
+        <div class="wrap">
+          <div class="about-grid">
+            <div class="reveal-side">
+              <h2>Made with care.</h2>
+            </div>
+
+            <div class="about-copy reveal-side">
+              <p>
+                At A and O Beverages, Bakes and More, we believe good food
+                doesn't need to be complicated.
+              </p>
+
+              <p>
+                We make fresh yoghurt-based drinks, parfaits and Greek yoghurt
+                in small batches, focusing on quality, freshness and flavor.
+              </p>
+
+              <p>
+                Our menu will continue to grow with more beverages and baked
+                favorites coming soon.
+              </p>
+
+              <div class="stat-row">
+                <div>
+                  <span class="stat-num">4</span>
+                  <span class="stat-label">Beverages</span>
+                </div>
+
+                <div>
+                  <span class="stat-num">2</span>
+                  <span class="stat-label">Pre-order options</span>
+                </div>
+
+                <div>
+                  <span class="stat-num">∞</span>
+                  <span class="stat-label">More to come</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =======================================================
+           THREE-IMAGE SHOWCASE
+      ======================================================== -->
+
+      <section class="section-page featured-gallery">
+        <div class="wrap">
+          <div class="image-gallery">
+            <figure class="gallery-card gallery-card-large">
+              <img
+                src="https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=700&q=80"
+                alt="Fresh parfait"
+                loading="lazy"
+              />
+
+              <figcaption>
+                <span>Fresh</span>
+                <strong>Parfait</strong>
+              </figcaption>
+            </figure>
+
+            <figure class="gallery-card">
+              <img
+                src="https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=700&q=80"
+                alt="Fresh yoghurt"
+                loading="lazy"
+              />
+
+              <figcaption>
+                <span>Made fresh</span>
+                <strong>Yoghurt</strong>
+              </figcaption>
+            </figure>
+
+            <figure class="gallery-card">
+              <img
+                src="https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=700&q=80"
+                alt="Fresh yoghurt beverage"
+                loading="lazy"
+              />
+
+              <figcaption>
+                <span>Served fresh</span>
+                <strong>Drinks</strong>
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <!-- =======================================================
+           HOW IT WORKS
+      ======================================================== -->
+
+      <section class="section-page">
+        <div class="wrap">
+          <div class="section-head reveal">
+            <div>
+              <h2>How ordering works</h2>
+            </div>
+
+            <p>
+              Choose what you want, customize it, pay through Mobile Money, and
+              submit your order.
+            </p>
+          </div>
+
+          <div class="steps" id="stepsGrid">
+            <div class="step-line" id="stepLine" aria-hidden="true"></div>
+
+            <div class="step">
+              <div class="step-num">1</div>
+
+              <h3>Choose</h3>
+
+              <p>Pick your favorite beverage and add it to your order.</p>
+            </div>
+
+            <div class="step">
+              <div class="step-num">2</div>
+
+              <h3>Customize</h3>
+
+              <p>
+                Choose your size, flavor, sweetness and other available options.
+              </p>
+            </div>
+
+            <div class="step">
+              <div class="step-num">3</div>
+
+              <h3>Pay</h3>
+
+              <p>Pay the displayed total to our Mobile Money number.</p>
+            </div>
+
+            <div class="step">
+              <div class="step-num">4</div>
+
+              <h3>Track</h3>
+
+              <p>
+                Submit your payment reference and use your order number to
+                follow your order.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =======================================================
+           CONTACT
+      ======================================================== -->
+
+      <section class="section-panel" id="contact">
+        <div class="wrap">
+          <div class="contact-grid">
+            <div class="contact-intro">
+              <h2>Get in touch.</h2>
+
+              <p>
+                Have a question about an order, delivery, or one of our
+                products? Reach out to us through any of our channels.
+              </p>
+            </div>
+
+            <div>
+              <ul class="contact-list">
+                <li>
+                  <span>Business</span>
+
+                  <strong>A and O Beverages Limited</strong>
+                </li>
+
+                <li>
+                  <span>Phone</span>
+
+                  <a href="tel:+233500000000"> 050 000 0000 </a>
+                </li>
+
+                <li>
+                  <span>Email</span>
+
+                  <a href="mailto:your@email.com"> your@email.com </a>
+                </li>
+
+                <li>
+                  <span>Instagram</span>
+
+                  <a
+                    href="https://instagram.com/YOUR_HANDLE"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    @YOUR_HANDLE
+                  </a>
+                </li>
+
+                <li>
+                  <span>TikTok</span>
+
+                  <a
+                    href="https://www.tiktok.com/@YOUR_HANDLE"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    @YOUR_HANDLE
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- =========================================================
+         FOOTER
+    ========================================================== -->
+
+    <footer>
+      <div class="wrap">
+        <div class="footer-row">
+          <span> © 2026 A and O Beverages, Bakes and More </span>
+
+          <span> Freshly made with care. </span>
+        </div>
+      </div>
+    </footer>
+
+    <!-- =========================================================
+         ORDER DRAWER
+    ========================================================== -->
+
+    <div class="backdrop" id="backdrop" aria-hidden="true"></div>
+
+    <aside
+      class="drawer"
+      id="drawer"
+      aria-label="Your order"
+      aria-hidden="true"
+    >
+      <!-- Drawer header -->
+
+      <div class="drawer-head">
+        <h3>Your order</h3>
+
+        <button
+          type="button"
+          class="drawer-close"
+          id="drawerClose"
+          aria-label="Close order"
+        >
+          &times;
+        </button>
+      </div>
+
+      <!-- =======================================================
+           SCROLLABLE CHECKOUT AREA
+      ======================================================== -->
+
+      <div class="drawer-scroll">
+        <!-- CART -->
+
+        <div class="drawer-body">
+          <div id="cartList"></div>
+        </div>
+
+        <!-- =====================================================
+             CUSTOMER / PAYMENT FORM
+        ====================================================== -->
+
+        <form class="drawer-form" id="orderForm" novalidate>
+          <!-- Customer name -->
+
+          <div class="field">
+            <label for="customerName"> Full name </label>
+
+            <input
+              type="text"
+              id="customerName"
+              name="customerName"
+              placeholder="Enter your full name"
+              autocomplete="name"
+              required
+            />
+          </div>
+
+          <!-- Phone -->
+
+          <div class="field">
+            <label for="customerPhone"> Phone number </label>
+
+            <input
+              type="tel"
+              id="customerPhone"
+              name="customerPhone"
+              placeholder="e.g. 059 990 7434"
+              autocomplete="tel"
+              required
+            />
+          </div>
+
+          <!-- Order method -->
+
+          <div class="field">
+            <label> Order method </label>
+
+            <div
+              class="option-group order-method-options"
+              id="orderMethodOptions"
+              role="group"
+              aria-label="Order method"
+            >
+              <button
+                type="button"
+                class="option-btn selected"
+                data-order-method="Pickup"
+                aria-pressed="true"
+              >
+                <span>Pickup</span>
+              </button>
+
+              <button
+                type="button"
+                class="option-btn"
+                data-order-method="Delivery"
+                aria-pressed="false"
+              >
+                <span>Delivery</span>
+              </button>
+            </div>
+
+            <input
+              type="hidden"
+              id="orderMethod"
+              name="orderMethod"
+              value="Pickup"
+            />
+          </div>
+
+          <!-- ===================================================
+               DELIVERY
+          ==================================================== -->
+
+          <div id="deliveryFields" hidden>
+            <div class="field">
+              <label for="deliveryAddress"> Delivery address </label>
+
+              <textarea
+                id="deliveryAddress"
+                name="deliveryAddress"
+                rows="3"
+                placeholder="Enter your delivery address"
+              ></textarea>
+            </div>
+
+            <div class="location-actions">
+              <button type="button" class="location-btn" id="useLocationBtn">
+                <span id="useLocationBtnText"> Use my current location </span>
+              </button>
+
+              <button
+                type="button"
+                class="location-reset-btn"
+                id="resetLocationBtn"
+                hidden
+              >
+                Reset location
+              </button>
+            </div>
+
+            <p
+              class="location-status"
+              id="locationStatus"
+              aria-live="polite"
+            ></p>
+          </div>
+
+          <!-- ===================================================
+               PAYMENT
+          ==================================================== -->
+
+          <div class="momo-payment-box">
+            <div class="payment-note">
+              <div class="payment-note-icon" aria-hidden="true">💳</div>
+
+              <div>
+                <strong> Pay with Mobile Money </strong>
+
+                <p>
+                  Pay
+                  <strong>
+                    <span id="momoAmount"> GHS 0.00 </span>
+                  </strong>
+                  to:
+                </p>
+
+                <p>
+                  <strong> 059 990 7434 </strong>
+
+                  <br />
+
+                  A and O Beverages Limited
+                </p>
+
+                <p>
+                  After payment, enter your MoMo transaction/reference ID below.
+                </p>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="momoReference">
+                MoMo Transaction / Reference ID
+              </label>
+
+              <input
+                type="text"
+                id="momoReference"
+                name="momoReference"
+                placeholder="Enter your transaction ID"
+                autocomplete="off"
+                required
+              />
+            </div>
+          </div>
+
+          <!-- ===================================================
+               SUBMIT
+          ==================================================== -->
+
+          <div class="order-btn-row">
+            <button type="submit" class="order-btn" id="submitOrderBtn">
+              I've paid — Submit order
+            </button>
+          </div>
+        </form>
+      </div>
+    </aside>
+
+    <!-- =========================================================
+         ORDER SUCCESS MODAL
+         Shown only after a successful order submission.
+    ========================================================== -->
+
+    <div
+      class="ao-order-modal"
+      id="aoOrderSuccessModal"
+      aria-hidden="true"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="aoSuccessTitle"
+    >
+      <div class="ao-order-modal-backdrop" data-success-close></div>
+
+      <div class="ao-order-success-card">
+        <button
+          type="button"
+          class="ao-modal-close"
+          id="aoSuccessClose"
+          aria-label="Close order confirmation"
+        >
+          &times;
+        </button>
+
+        <div class="ao-success-icon" aria-hidden="true">✓</div>
+
+        <div class="ao-success-eyebrow">Order received</div>
+
+        <h2 id="aoSuccessTitle">Your order is on its way! 🎉</h2>
+
+        <p class="ao-success-text">
+          Thank you for ordering from A and O Beverages, Bakes and More. We've
+          received your order and will verify your payment.
+        </p>
+
+        <div class="ao-order-number-box">
+          <span> Your order number </span>
+
+          <strong id="aoSuccessOrderNumber"> AO-0000000000 </strong>
+        </div>
+
+        <p class="ao-success-help">
+          Keep this number safe. You can use it to check the latest status of
+          your order.
+        </p>
+
+        <div class="ao-success-actions">
+          <button
+            type="button"
+            class="ao-primary-action"
+            id="aoTrackFromSuccess"
+          >
+            Track My Order
+          </button>
+
+          <button
+            type="button"
+            class="ao-secondary-action"
+            id="aoDoneFromSuccess"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================================================
+         ORDER TRACKING MODAL
+    ========================================================== -->
+
+    <div
+      class="ao-tracking-modal"
+      id="aoTrackingModal"
+      aria-hidden="true"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="aoTrackingTitle"
+    >
+      <div class="ao-tracking-backdrop" data-tracking-close></div>
+
+      <div class="ao-tracking-card">
+        <div class="ao-tracking-header">
+          <div>
+            <div class="ao-success-eyebrow">Order tracking</div>
+
+            <h2 id="aoTrackingTitle">Where's my order?</h2>
+
+            <p>Enter your order number to see the latest update.</p>
+          </div>
+
+          <button
+            type="button"
+            class="ao-modal-close"
+            id="aoTrackingClose"
+            aria-label="Close order tracking"
+          >
+            &times;
+          </button>
+        </div>
+
+        <!-- Tracking search -->
+
+        <form class="ao-tracking-form" id="aoTrackingForm">
+          <label for="aoTrackingOrderNumber"> Order number </label>
+
+          <div class="ao-tracking-input-row">
+            <input
+              type="text"
+              id="aoTrackingOrderNumber"
+              name="orderNumber"
+              placeholder="e.g. AO-1750000000000"
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
+              required
+            />
+
+            <button
+              type="submit"
+              class="ao-primary-action"
+              id="aoTrackingSubmit"
+            >
+              Track
+            </button>
+          </div>
+
+          <p class="ao-tracking-help">
+            Your order number was shown after you submitted your order.
+          </p>
+        </form>
+
+        <!-- Tracking result -->
+
+        <div
+          class="ao-tracking-result"
+          id="aoTrackingResult"
+          aria-live="polite"
+        ></div>
+      </div>
+    </div>
+
+    <!-- =========================================================
+         JAVASCRIPT
+    ========================================================== -->
+
+    <script src="script.js"></script>
+  </body>
+</html>

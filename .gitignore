@@ -1,0 +1,8 @@
+node_modules/
+server/.env
+
+server/orders.db
+server/orders.db-shm
+server/orders.db-wal
+
+.DS_Store

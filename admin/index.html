@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>A and O — Admin</title>
+
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+
+  <body>
+    <!-- =========================
+         LOGIN SCREEN
+    ========================== -->
+
+    <main id="loginScreen" class="login-screen">
+      <div class="login-card">
+        <div class="brand">
+          <div class="brand-mark">A&O</div>
+
+          <div>
+            <h1>A and O</h1>
+            <p>Beverages, Bakes and More</p>
+          </div>
+        </div>
+
+        <div class="login-heading">
+          <span class="eyebrow">ADMIN PORTAL</span>
+
+          <h2>Welcome back.</h2>
+
+          <p>Sign in to manage customer orders and verify payments.</p>
+        </div>
+
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="username">Username</label>
+
+            <input
+              type="text"
+              id="username"
+              autocomplete="username"
+              placeholder="Enter your username"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="password">Password</label>
+
+            <input
+              type="password"
+              id="password"
+              autocomplete="current-password"
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+
+          <p id="loginError" class="error-message" hidden></p>
+
+          <button type="submit" class="primary-btn">
+            <span>Login to dashboard</span>
+            <span class="button-arrow">→</span>
+          </button>
+        </form>
+      </div>
+    </main>
+
+    <!-- =========================
+         ADMIN DASHBOARD
+    ========================== -->
+
+    <main id="dashboardScreen" hidden>
+      <!-- HEADER -->
+
+      <header class="dashboard-header">
+        <div class="dashboard-brand">
+          <div class="dashboard-brand-mark">A&O</div>
+
+          <div>
+            <h1>A and O</h1>
+            <p>Beverages, Bakes and More</p>
+          </div>
+        </div>
+
+        <div class="dashboard-header-actions">
+          <div class="admin-label">
+            <span>Admin Dashboard</span>
+            <small>Order management</small>
+          </div>
+
+          <button type="button" id="logoutBtn" class="logout-btn">
+            Logout
+          </button>
+        </div>
+      </header>
+
+      <!-- CONTENT -->
+
+      <section class="dashboard-content">
+        <!-- INTRO -->
+
+        <div class="dashboard-intro">
+          <div>
+            <span class="eyebrow">ORDER MANAGEMENT</span>
+
+            <h2>Manage your orders.</h2>
+
+            <p>
+              Review customer orders, verify Mobile Money payments, and keep
+              orders moving from pending to completed.
+            </p>
+          </div>
+        </div>
+
+        <!-- SUMMARY -->
+
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="summary-icon">🧾</div>
+
+            <div>
+              <span class="summary-label">Total Orders</span>
+
+              <strong id="totalOrders">0</strong>
+
+              <span class="summary-description"> All customer orders </span>
+            </div>
+          </div>
+
+          <div class="summary-card warning-card">
+            <div class="summary-icon">⏳</div>
+
+            <div>
+              <span class="summary-label">Pending Payment</span>
+
+              <strong id="pendingPayments">0</strong>
+
+              <span class="summary-description"> Awaiting verification </span>
+            </div>
+          </div>
+
+          <div class="summary-card success-card">
+            <div class="summary-icon">✓</div>
+
+            <div>
+              <span class="summary-label">Verified Payments</span>
+
+              <strong id="verifiedPayments">0</strong>
+
+              <span class="summary-description"> Payments confirmed </span>
+            </div>
+          </div>
+
+          <div class="summary-card accent-card">
+            <div class="summary-icon">↗</div>
+
+            <div>
+              <span class="summary-label">Active Orders</span>
+
+              <strong id="activeOrders">0</strong>
+
+              <span class="summary-description"> Still being processed </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ORDERS -->
+
+        <section class="orders-section">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">CUSTOMER ORDERS</span>
+
+              <h2>Orders</h2>
+
+              <p>Newest orders appear first.</p>
+            </div>
+
+            <button type="button" id="refreshBtn" class="refresh-btn">
+              <span class="refresh-icon">↻</span>
+              Refresh orders
+            </button>
+          </div>
+
+          <div id="ordersContainer" class="orders-container"></div>
+
+          <div id="emptyOrders" class="empty-orders" hidden>
+            <div class="empty-icon">🧾</div>
+
+            <h3>No orders yet</h3>
+
+            <p>Customer orders will appear here once they are submitted.</p>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="admin.js"></script>
+  </body>
+</html>

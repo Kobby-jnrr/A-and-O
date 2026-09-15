@@ -1724,7 +1724,7 @@ async function submitOrder(event) {
 
       try {
         try {
-          showOrderSuccess(ref, amountGHS);
+          showOrderSuccess(orderNumber, amountGHS);
         } catch (e) {}
 
         const orderPayload = {

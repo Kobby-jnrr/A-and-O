@@ -60,9 +60,7 @@ const PRODUCTS = {
       red_apples: "Red Apples",
       red_grapes: "Red Grapes",
       mangoes: "Mangoes",
-      strawberries: "Strawberries",
-      bananas: "Bananas",
-      pineapples: "Pineapples",
+      kiwi: "Kiwi",
     },
 
     toppings: {

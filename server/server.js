@@ -129,28 +129,46 @@ app.post(
 
       if (event.event === "charge.success") {
         const reference = event.data?.reference;
+        // Try to extract order_number from metadata if present
+        const metadataOrderNumber =
+          event.data?.metadata?.order_number ||
+          event.data?.metadata?.orderNumber ||
+          null;
 
-        if (reference) {
-          try {
-            const result = await db.query(
-              `UPDATE orders SET payment_status = 'Verified', order_status = 'Processing', updated_at = CURRENT_TIMESTAMP WHERE momo_reference = $1 AND payment_status != 'Verified' RETURNING order_number, id, total_amount`,
-              [String(reference)],
+        try {
+          let result;
+
+          if (metadataOrderNumber) {
+            result = await db.query(
+              `UPDATE orders SET payment_status = 'Verified', order_status = 'Processing', updated_at = CURRENT_TIMESTAMP, momo_reference = $1 WHERE order_number = $2 AND payment_status != 'Verified' RETURNING order_number, id, total_amount`,
+              [String(reference), String(metadataOrderNumber)],
             );
+          }
 
-            if (result.rows.length > 0) {
-              console.log(
-                "Order verified via webhook:",
-                result.rows[0].order_number,
-              );
-            } else {
-              console.log(
-                "Webhook: no matching order for reference",
-                reference,
+          // Fallback: try matching by momo_reference
+          if (!result || result.rows.length === 0) {
+            if (reference) {
+              result = await db.query(
+                `UPDATE orders SET payment_status = 'Verified', order_status = 'Processing', updated_at = CURRENT_TIMESTAMP WHERE momo_reference = $1 AND payment_status != 'Verified' RETURNING order_number, id, total_amount`,
+                [String(reference)],
               );
             }
-          } catch (dbErr) {
-            console.error("Webhook DB error:", dbErr);
           }
+
+          if (result && result.rows.length > 0) {
+            console.log(
+              "Order verified via webhook:",
+              result.rows[0].order_number,
+            );
+          } else {
+            console.log(
+              "Webhook: no matching order for reference/metadata",
+              reference,
+              metadataOrderNumber,
+            );
+          }
+        } catch (dbErr) {
+          console.error("Webhook DB error:", dbErr);
         }
       }
 
@@ -270,6 +288,215 @@ app.get("/api/paystack/verify/:reference", async (req, res) => {
 });
 
 // ============================================================
+// CREATE PROVISIONAL ORDER (before payment)
+// ============================================================
+
+app.post("/api/orders/init", async (req, res) => {
+  let client;
+
+  try {
+    const {
+      customerName,
+      customerPhone,
+      orderMethod,
+      deliveryAddress,
+      locationLat,
+      locationLng,
+      locationLink,
+      items,
+    } = req.body;
+
+    if (!customerName || !customerPhone || !orderMethod) {
+      return res
+        .status(400)
+        .json({
+          message: "Please provide your name, phone number, and order method.",
+        });
+    }
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "Please add at least one product to your order." });
+    }
+
+    if (!["Pickup", "Delivery"].includes(orderMethod)) {
+      return res
+        .status(400)
+        .json({ message: "Order method must be either Pickup or Delivery." });
+    }
+
+    if (orderMethod === "Delivery" && !deliveryAddress && !locationLink) {
+      return res
+        .status(400)
+        .json({ message: "Please provide a delivery address or location." });
+    }
+
+    const cleanCustomerName = String(customerName).trim();
+    const cleanCustomerPhone = String(customerPhone).trim();
+
+    if (!cleanCustomerName || !cleanCustomerPhone) {
+      return res
+        .status(400)
+        .json({ message: "Please provide valid customer information." });
+    }
+
+    // Validate products and compute total
+    const validatedItems = [];
+    let calculatedTotal = 0;
+
+    for (const item of items) {
+      const productId = String(item.productId || "").trim();
+      const productResult = await db.query(
+        "SELECT * FROM products WHERE id = $1 LIMIT 1",
+        [productId],
+      );
+      const productRow = productResult.rows[0];
+
+      if (!productRow || productRow.status !== "available") {
+        return res
+          .status(400)
+          .json({ message: `This product is not available: ${productId}` });
+      }
+
+      const product = productForApi(productRow);
+
+      const quantity = Number(item.quantity);
+
+      if (!Number.isInteger(quantity) || quantity <= 0) {
+        return res
+          .status(400)
+          .json({ message: "Each product must have a valid quantity." });
+      }
+
+      let unitPrice = 0;
+      let description = "";
+
+      if (product.type === "brukina-custom") {
+        unitPrice = product.price;
+      } else if (product.type === "flavor-size") {
+        const size = String(item.sizeId || "").trim();
+        const flavor = String(item.flavorId || "")
+          .trim()
+          .toLowerCase();
+        if (!product.sizes?.[size])
+          return res
+            .status(400)
+            .json({
+              message: "Please select a valid size for Fresh Yoghurt Drink.",
+            });
+        if (!product.flavors?.[flavor])
+          return res
+            .status(400)
+            .json({
+              message: "Please select a valid flavor for Fresh Yoghurt Drink.",
+            });
+        unitPrice = product.sizes[size];
+        description = `${flavor.charAt(0).toUpperCase() + flavor.slice(1)} - ${size}`;
+      } else if (product.type === "parfait-custom") {
+        unitPrice = product.price;
+      } else if (product.type === "size-sweetness") {
+        const size = String(item.sizeId || "").trim();
+        const sweetness = String(item.sweetnessId || "")
+          .trim()
+          .toLowerCase();
+        if (!product.prices?.[size])
+          return res
+            .status(400)
+            .json({ message: "Please select a valid size for Greek Yoghurt." });
+        if (!product.prices[size]?.[sweetness])
+          return res
+            .status(400)
+            .json({
+              message:
+                "Please select whether the Greek Yoghurt is sweetened or unsweetened.",
+            });
+        unitPrice = product.prices[size][sweetness];
+        description = `${size} - ${sweetness.charAt(0).toUpperCase() + sweetness.slice(1)}`;
+      } else {
+        return res
+          .status(400)
+          .json({ message: "This product has an unsupported configuration." });
+      }
+
+      calculatedTotal += unitPrice * quantity;
+
+      validatedItems.push({
+        productId,
+        productName: product.name,
+        quantity,
+        unitPrice,
+        description,
+      });
+    }
+
+    // Create order number and insert order + items
+    client = await db.connect();
+    try {
+      await client.query("BEGIN");
+
+      const orderNumber = await createUniqueOrderNumber();
+
+      const orderResult = await client.query(
+        `INSERT INTO orders (order_number, customer_name, customer_phone, order_method, delivery_address, location_lat, location_lng, location_link, total_amount, payment_method, payment_status, order_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'Paystack','Pending','Pending') RETURNING id`,
+        [
+          orderNumber,
+          cleanCustomerName,
+          cleanCustomerPhone,
+          orderMethod,
+          deliveryAddress ? String(deliveryAddress).trim() : null,
+          locationLat ?? null,
+          locationLng ?? null,
+          locationLink || null,
+          calculatedTotal,
+        ],
+      );
+
+      const orderId = orderResult.rows[0].id;
+
+      for (const item of validatedItems) {
+        await client.query(
+          `INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price, description) VALUES ($1,$2,$3,$4,$5,$6)`,
+          [
+            orderId,
+            item.productId,
+            item.productName,
+            item.quantity,
+            item.unitPrice,
+            item.description || null,
+          ],
+        );
+      }
+
+      await client.query("COMMIT");
+
+      return res
+        .status(201)
+        .json({
+          success: true,
+          orderNumber,
+          orderId,
+          totalAmount: calculatedTotal,
+        });
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      if (client) client.release();
+    }
+  } catch (error) {
+    console.error("Create provisional order error:", error);
+    if (client)
+      try {
+        client.release();
+      } catch {}
+    return res
+      .status(500)
+      .json({ message: "Could not create provisional order." });
+  }
+});
+
+// ============================================================
 // ADMIN LOGIN
 // ============================================================
 
@@ -371,56 +598,17 @@ app.post("/api/orders", async (req, res) => {
 
     const cleanCustomerName = String(customerName).trim();
     const cleanCustomerPhone = String(customerPhone).trim();
-    const cleanPaystackRef = String(paystackReference).trim();
+    const cleanPaystackRef = paystackReference
+      ? String(paystackReference).trim()
+      : "";
+    const providedOrderNumber = req.body.orderNumber
+      ? String(req.body.orderNumber).trim()
+      : null;
 
     if (!cleanCustomerName || !cleanCustomerPhone) {
-      return res.status(400).json({
-        message: "Please provide valid customer information.",
-      });
-    }
-
-    if (!cleanPaystackRef) {
-      return res.status(400).json({
-        message: "Please provide a valid payment reference.",
-      });
-    }
-
-    // --------------------------------------------------------
-    // VERIFY PAYSTACK PAYMENT
-    // --------------------------------------------------------
-
-    let verifiedAmount = 0;
-
-    try {
-      const verifyRes = await axios.get(
-        `https://api.paystack.co/transaction/verify/${encodeURIComponent(cleanPaystackRef)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
-          },
-        },
-      );
-
-      const txn = verifyRes.data?.data;
-
-      if (!txn || txn.status !== "success") {
-        return res.status(400).json({
-          message: "Payment could not be verified. Please try again.",
-        });
-      }
-
-      // Paystack returns amount in kobo (pesewas for GHS)
-      verifiedAmount = txn.amount / 100;
-    } catch (verifyError) {
-      console.error(
-        "Paystack verify error:",
-        verifyError?.response?.data || verifyError.message,
-      );
-
-      return res.status(400).json({
-        message:
-          "We could not verify your payment. Please contact us if payment was deducted.",
-      });
+      return res
+        .status(400)
+        .json({ message: "Please provide valid customer information." });
     }
 
     // --------------------------------------------------------
@@ -612,58 +800,120 @@ app.post("/api/orders", async (req, res) => {
     }
 
     // --------------------------------------------------------
-    // CREATE ORDER NUMBER
+    // APPLY FEE RULE
     // --------------------------------------------------------
 
-    const orderNumber = await createUniqueOrderNumber();
+    // Fee policy: 50 GHS and below => 0.50 GHS, otherwise 1%
+    const fee =
+      Number(calculatedTotal) <= 50
+        ? 0.5
+        : Number((calculatedTotal * 0.01).toFixed(2));
+    const expectedTotal = Number((calculatedTotal + fee).toFixed(2));
 
     // --------------------------------------------------------
-    // POSTGRESQL TRANSACTION
+    // VERIFY PAYSTACK PAYMENT
+    // --------------------------------------------------------
+
+    if (!cleanPaystackRef) {
+      return res
+        .status(400)
+        .json({ message: "Please provide a valid payment reference." });
+    }
+
+    let verifiedAmount = 0;
+    try {
+      const verifyRes = await axios.get(
+        `https://api.paystack.co/transaction/verify/${encodeURIComponent(cleanPaystackRef)}`,
+        { headers: { Authorization: `Bearer ${PAYSTACK_SECRET_KEY}` } },
+      );
+
+      const txn = verifyRes.data?.data;
+      if (!txn || txn.status !== "success") {
+        return res
+          .status(400)
+          .json({
+            message: "Payment could not be verified. Please try again.",
+          });
+      }
+
+      verifiedAmount = Number(txn.amount) / 100;
+
+      if (Math.abs(verifiedAmount - expectedTotal) > 0.01) {
+        return res
+          .status(400)
+          .json({
+            message:
+              "The amount paid does not match the order total including fees.",
+            expected: expectedTotal,
+            paid: verifiedAmount,
+          });
+      }
+    } catch (verifyError) {
+      console.error(
+        "Paystack verify error:",
+        verifyError?.response?.data || verifyError.message,
+      );
+      return res
+        .status(400)
+        .json({
+          message:
+            "We could not verify your payment. Please contact us if payment was deducted.",
+        });
+    }
+
+    // --------------------------------------------------------
+    // POSTGRESQL TRANSACTION: update provisional order or create new
     // --------------------------------------------------------
 
     client = await db.connect();
-
     try {
       await client.query("BEGIN");
 
+      if (providedOrderNumber) {
+        // Ensure provisional order exists and total matches
+        const existing = await client.query(
+          `SELECT id, total_amount FROM orders WHERE order_number = $1 LIMIT 1`,
+          [providedOrderNumber],
+        );
+        if (existing.rows.length === 0) {
+          await client.query("ROLLBACK");
+          return res
+            .status(404)
+            .json({ message: "Provisional order not found." });
+        }
+
+        const storedTotal = Number(existing.rows[0].total_amount);
+        if (Math.abs(storedTotal - calculatedTotal) > 0.01) {
+          await client.query("ROLLBACK");
+          return res
+            .status(400)
+            .json({
+              message: "Order items do not match provisional order total.",
+            });
+        }
+
+        const updateRes = await client.query(
+          `UPDATE orders SET momo_reference = $1, payment_method = 'Paystack', payment_status = 'Verified', order_status = 'Pending', updated_at = CURRENT_TIMESTAMP WHERE order_number = $2 RETURNING id`,
+          [cleanPaystackRef, providedOrderNumber],
+        );
+
+        await client.query("COMMIT");
+
+        return res
+          .status(200)
+          .json({
+            success: true,
+            message: "Order finalized.",
+            orderNumber: providedOrderNumber,
+            orderId: updateRes.rows[0].id,
+          });
+      }
+
+      // No provisional order provided — insert new order record
+      const orderNumber = await createUniqueOrderNumber();
+
       const orderResult = await client.query(
-        `
-        INSERT INTO orders (
-          order_number,
-          customer_name,
-          customer_phone,
-          order_method,
-          delivery_address,
-          location_lat,
-          location_lng,
-          location_link,
-          total_amount,
-          payment_method,
-          momo_number,
-          momo_account_name,
-          momo_reference,
-          payment_status,
-          order_status
-        )
-        VALUES (
-          $1,
-          $2,
-          $3,
-          $4,
-          $5,
-          $6,
-          $7,
-          $8,
-          $9,
-          'Paystack',
-          NULL,
-          NULL,
-          $10,
-          'Verified',
-          'Pending'
-        )
-        RETURNING id
-        `,
+        `INSERT INTO orders (order_number, customer_name, customer_phone, order_method, delivery_address, location_lat, location_lng, location_link, total_amount, payment_method, momo_reference, payment_status, order_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'Paystack',$10,'Verified','Pending') RETURNING id`,
         [
           orderNumber,
           cleanCustomerName,
@@ -682,24 +932,7 @@ app.post("/api/orders", async (req, res) => {
 
       for (const item of validatedItems) {
         await client.query(
-          `
-          INSERT INTO order_items (
-            order_id,
-            product_id,
-            product_name,
-            quantity,
-            unit_price,
-            description
-          )
-          VALUES (
-            $1,
-            $2,
-            $3,
-            $4,
-            $5,
-            $6
-          )
-          `,
+          `INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price, description) VALUES ($1,$2,$3,$4,$5,$6)`,
           [
             orderId,
             item.productId,
@@ -713,17 +946,19 @@ app.post("/api/orders", async (req, res) => {
 
       await client.query("COMMIT");
 
-      res.status(201).json({
-        success: true,
-        message: "Your order has been received successfully!",
-        orderId,
-        orderNumber,
-        totalAmount: calculatedTotal,
-        paymentStatus: "Verified",
-        orderStatus: "Pending",
-        trackingMessage:
-          "Please keep your order number so you can check your order status later.",
-      });
+      res
+        .status(201)
+        .json({
+          success: true,
+          message: "Your order has been received successfully!",
+          orderId,
+          orderNumber,
+          totalAmount: calculatedTotal,
+          paymentStatus: "Verified",
+          orderStatus: "Pending",
+          trackingMessage:
+            "Please keep your order number so you can check your order status later.",
+        });
     } catch (transactionError) {
       await client.query("ROLLBACK");
       throw transactionError;
@@ -872,11 +1107,9 @@ app.post("/api/admin/products", authenticateToken, async (req, res) => {
   try {
     const product = validateProductInput(req.body, { requireId: true });
     if (!product.name || !product.type || !product.config) {
-      return res
-        .status(400)
-        .json({
-          message: "Product ID, name, type, and configuration are required.",
-        });
+      return res.status(400).json({
+        message: "Product ID, name, type, and configuration are required.",
+      });
     }
     const result = await db.query(
       `INSERT INTO products (id, name, category, type, config, image_url, description, status, sort_order)
@@ -896,14 +1129,12 @@ app.post("/api/admin/products", authenticateToken, async (req, res) => {
     res.status(201).json(productForApi(result.rows[0]));
   } catch (error) {
     console.error("Create product error:", error);
-    res
-      .status(error.code === "23505" ? 409 : 400)
-      .json({
-        message:
-          error.code === "23505"
-            ? "That product ID already exists."
-            : error.message || "Could not create product.",
-      });
+    res.status(error.code === "23505" ? 409 : 400).json({
+      message:
+        error.code === "23505"
+          ? "That product ID already exists."
+          : error.message || "Could not create product.",
+    });
   }
 });
 
@@ -1153,20 +1384,32 @@ app.post("/api/paystack/initialize", async (req, res) => {
       });
     }
 
+    // Apply fee policy: <= 50 GHS => flat 0.50 GHS; > 50 => 1% fee
+    const baseAmount = Number(amountGHS);
+    const fee = baseAmount <= 50 ? 0.5 : Number((baseAmount * 0.01).toFixed(2));
+    const totalAmountGHS = Number((baseAmount + fee).toFixed(2));
+
     // Paystack expects amount in the lowest currency unit (pesewas for GHS)
-    const amountKobo = Math.round(Number(amountGHS) * 100);
+    const amountKobo = Math.round(totalAmountGHS * 100);
+
+    const payload = {
+      email,
+      amount: amountKobo,
+      currency: "GHS",
+      metadata: {
+        customer_name: customerName,
+        customer_phone: customerPhone,
+      },
+    };
+
+    // include order number in metadata when provided by frontend
+    if (req.body.orderNumber) {
+      payload.metadata.order_number = String(req.body.orderNumber);
+    }
 
     const paystackRes = await axios.post(
       "https://api.paystack.co/transaction/initialize",
-      {
-        email,
-        amount: amountKobo,
-        currency: "GHS",
-        metadata: {
-          customer_name: customerName,
-          customer_phone: customerPhone,
-        },
-      },
+      payload,
       {
         headers: {
           Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
@@ -1183,6 +1426,9 @@ app.post("/api/paystack/initialize", async (req, res) => {
       authorization_url,
       amountKobo,
       email,
+      fee,
+      amountGHS: baseAmount,
+      totalAmountGHS,
       // Return the public key so the frontend can open the inline popup
       publicKey: PAYSTACK_PUBLIC_KEY,
     });

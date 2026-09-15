@@ -1579,18 +1579,57 @@ async function submitOrder(event) {
 
   try {
     // -------------------------------------------------------
-    // Step 1 — Ask the server to initialise a Paystack charge
+    // Step 1 — Create a provisional order on the server
+    // -------------------------------------------------------
+
+    const provisionalResponse = await fetch(`${API_BASE_URL}/orders/init`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        customerName,
+        customerPhone,
+        orderMethod,
+        deliveryAddress:
+          orderMethod === "Delivery" ? deliveryAddress || null : null,
+        locationLat: orderMethod === "Delivery" ? deliveryLocation.lat : null,
+        locationLng: orderMethod === "Delivery" ? deliveryLocation.lng : null,
+        locationLink: orderMethod === "Delivery" ? deliveryLocation.link : null,
+        items: cart.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          includeCoconut: item.options?.includeCoconut || false,
+          flavorId: item.options?.flavorId || null,
+          sizeId: item.options?.sizeId || null,
+          fruits: item.options?.fruits || [],
+          toppings: item.options?.toppings || [],
+          syrupId: item.options?.syrupId || "none",
+          sweetnessId: item.options?.sweetnessId || null,
+        })),
+      }),
+    });
+
+    const provisionalData = await provisionalResponse.json().catch(() => ({}));
+
+    if (!provisionalResponse.ok) {
+      throw new Error(
+        provisionalData.message || "Could not create provisional order.",
+      );
+    }
+
+    const { orderNumber } = provisionalData;
+
+    // -------------------------------------------------------
+    // Step 2 — Ask the server to initialise a Paystack charge
     // -------------------------------------------------------
     const initResponse = await fetch(`${API_BASE_URL}/paystack/initialize`, {
       method: "POST",
-
       headers: { "Content-Type": "application/json" },
-
       body: JSON.stringify({
         email: `${customerPhone.replace(/\s/g, "")}@aoandbeverages.com`,
         amountGHS,
         customerName,
         customerPhone,
+        orderNumber,
       }),
     });
 
@@ -1603,6 +1642,8 @@ async function submitOrder(event) {
     }
 
     const { reference } = initData;
+
+    // Do not display fees to customers; fee is added server-side to the amount sent to Paystack.
 
     // -------------------------------------------------------
     // Step 2 — Open Paystack inline popup
@@ -1634,6 +1675,11 @@ async function submitOrder(event) {
             display_name: "Order Method",
             variable_name: "order_method",
             value: orderMethod,
+          },
+          {
+            display_name: "Order Number",
+            variable_name: "order_number",
+            value: orderNumber,
           },
         ],
       },
@@ -1692,6 +1738,7 @@ async function submitOrder(event) {
           locationLink:
             orderMethod === "Delivery" ? deliveryLocation.link : null,
           paystackReference: ref,
+          orderNumber: orderNumber || null,
           items: cart.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,

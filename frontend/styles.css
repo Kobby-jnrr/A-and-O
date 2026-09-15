@@ -182,15 +182,29 @@ a {
 }
 
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   flex-shrink: 0;
   color: var(--text-strong);
   font-family: "Newsreader", Georgia, serif;
   font-size: 1.6rem;
   line-height: 1;
   letter-spacing: -0.035em;
+  text-decoration: none;
 }
 
-.brand span {
+.nav-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: 50%;
+  background: #000;
+  flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+}
+
+.brand-name span {
   color: var(--accent);
 }
 

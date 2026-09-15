@@ -25,13 +25,10 @@ const addProductBtn = document.getElementById("addProductBtn");
 const productModal = document.getElementById("productModal");
 const productForm = document.getElementById("productForm");
 const productFormError = document.getElementById("productFormError");
+const productFields = document.getElementById("productFields");
+let adminProducts = [];
+let editingProductId = null;
 
-const PRODUCT_CONFIG_TEMPLATES = {
-  "brukina-custom": { price: 20 },
-  "flavor-size": { sizes: { "500ml": 25, "300ml": 15 }, flavors: { plain: "Plain", strawberry: "Strawberry" } },
-  "parfait-custom": { price: 40, fruits: { mangoes: "Mangoes" }, toppings: { granola: "Granola" }, syrups: { none: "No Syrup", honey: "Honey" } },
-  "size-sweetness": { prices: { "500ml": { sweetened: 50, unsweetened: 45 } } },
-};
 
 /* =========================
    LOGIN
@@ -669,24 +666,30 @@ async function loadProducts() {
 }
 
 function renderProducts(products) {
+  adminProducts = Array.isArray(products) ? products : [];
   if (!products.length) {
     productsContainer.innerHTML = `<div class="empty-orders"><h3>No products yet</h3><p>Add your first product to make it available to customers.</p></div>`;
     return;
   }
   productsContainer.innerHTML = products.map((product) => `
     <article class="product-card">
-      <div><span class="product-type">${escapeHtml(product.type)}</span><h3>${escapeHtml(product.name)}</h3><p>${escapeHtml(product.category || "Beverage")}</p></div>
-      <label>Status
-        <select class="product-status-select" data-id="${escapeHtml(product.id)}">
-          <option value="available" ${product.status === "available" ? "selected" : ""}>Available</option>
-          <option value="out_of_stock" ${product.status === "out_of_stock" ? "selected" : ""}>Out of stock</option>
-          <option value="unavailable" ${product.status === "unavailable" ? "selected" : ""}>Temporarily unavailable</option>
-        </select>
-      </label>
-      <button type="button" class="delete-product-btn" data-id="${escapeHtml(product.id)}" data-name="${escapeHtml(product.name)}">Delete</button>
+      <div class="product-card-heading"><span class="product-type">${escapeHtml(product.type.replaceAll("-", " "))}</span><h3>${escapeHtml(product.name)}</h3><p>${escapeHtml(product.category || "Beverage")}</p></div>
+      <div class="product-status-row">
+        <span class="status-pill status-${escapeHtml(product.status)}">${escapeHtml(product.status.replaceAll("_", " "))}</span>
+        <div class="availability-actions">
+          <button type="button" class="availability-btn ${product.status === "available" ? "selected" : ""}" data-id="${escapeHtml(product.id)}" data-status="available">In stock</button>
+          <button type="button" class="availability-btn ${product.status === "out_of_stock" ? "selected" : ""}" data-id="${escapeHtml(product.id)}" data-status="out_of_stock">Out of stock</button>
+          <button type="button" class="availability-btn ${product.status === "unavailable" ? "selected" : ""}" data-id="${escapeHtml(product.id)}" data-status="unavailable">Hide</button>
+        </div>
+      </div>
+      <div class="product-card-actions">
+        <button type="button" class="edit-product-btn" data-id="${escapeHtml(product.id)}">Edit product</button>
+        <button type="button" class="delete-product-btn" data-id="${escapeHtml(product.id)}" data-name="${escapeHtml(product.name)}">Delete</button>
+      </div>
     </article>`).join("");
 
-  document.querySelectorAll(".product-status-select").forEach((select) => select.addEventListener("change", () => updateProduct(select.dataset.id, { status: select.value })));
+  document.querySelectorAll(".availability-btn").forEach((button) => button.addEventListener("click", async () => { await updateProduct(button.dataset.id, { status: button.dataset.status }); loadProducts(); }));
+  document.querySelectorAll(".edit-product-btn").forEach((button) => button.addEventListener("click", () => openProductModal(adminProducts.find((product) => product.id === button.dataset.id))));
   document.querySelectorAll(".delete-product-btn").forEach((button) => button.addEventListener("click", () => deleteProduct(button.dataset.id, button.dataset.name)));
 }
 
@@ -704,11 +707,65 @@ async function deleteProduct(id, name) {
   loadProducts();
 }
 
-function openProductModal() {
+function optionRows(entries = {}, group, includePrice = false) {
+  return Object.entries(entries).map(([id, value]) => `<div class="option-row" data-option-group="${group}"><input data-option-id value="${escapeHtml(id)}" placeholder="ID" /><input data-option-label value="${escapeHtml(includePrice ? id : value)}" placeholder="${includePrice ? "Size" : "Name"}" />${includePrice ? `<input data-option-price type="number" min="0" step="0.01" value="${escapeHtml(value)}" placeholder="Price" />` : ""}<button type="button" class="remove-option-btn">Remove</button></div>`).join("");
+}
+
+function renderProductFields(type, config = {}) {
+  if (type === "brukina-custom") {
+    productFields.innerHTML = `<h3>Brukina details</h3><label>Price (GHS)<input id="basePrice" type="number" min="0" step="0.01" value="${escapeHtml(config.price ?? 20)}" required /></label><div class="options-editor"><div class="options-heading"><strong>Toppings</strong><button type="button" class="add-option-btn" data-group="brukina-toppings">Add topping</button></div><div id="brukina-toppings">${optionRows(config.toppings || { coconut_flakes: "Coconut Flakes" }, "brukina-toppings")}</div></div>`;
+  } else if (type === "flavor-size") {
+    productFields.innerHTML = `<h3>Yoghurt details</h3><div class="options-editor"><div class="options-heading"><strong>Flavors</strong><button type="button" class="add-option-btn" data-group="flavors">Add flavor</button></div><div id="flavors">${optionRows(config.flavors || { plain: "Plain" }, "flavors")}</div></div><div class="options-editor"><div class="options-heading"><strong>Sizes and prices</strong><button type="button" class="add-option-btn" data-group="sizes">Add size</button></div><div id="sizes">${optionRows(config.sizes || { "500ml": 25 }, "sizes", true)}</div></div>`;
+  } else if (type === "parfait-custom") {
+    productFields.innerHTML = `<h3>Parfait details</h3><label>Base price (GHS)<input id="basePrice" type="number" min="0" step="0.01" value="${escapeHtml(config.price ?? 40)}" required /></label>${["fruits", "toppings", "syrups"].map((group) => `<div class="options-editor"><div class="options-heading"><strong>${group[0].toUpperCase() + group.slice(1)}</strong><button type="button" class="add-option-btn" data-group="${group}">Add ${group.slice(0, -1)}</button></div><div id="${group}">${optionRows(config[group] || (group === "syrups" ? { none: "No Syrup" } : {}), group)}</div></div>`).join("")}`;
+  } else {
+    const prices = config.prices || { "500ml": { sweetened: 50, unsweetened: 45 } };
+    productFields.innerHTML = `<h3>Size and sweetness prices</h3><div class="options-editor"><div class="options-heading"><strong>Sizes</strong><button type="button" class="add-option-btn" data-group="sweetness-prices">Add size</button></div><div id="sweetness-prices">${Object.entries(prices).map(([size, values]) => `<div class="option-row sweetness-row"><input data-size value="${escapeHtml(size)}" placeholder="Size" /><input data-sweetened type="number" min="0" step="0.01" value="${escapeHtml(values.sweetened ?? "")}" placeholder="Sweetened price" /><input data-unsweetened type="number" min="0" step="0.01" value="${escapeHtml(values.unsweetened ?? "")}" placeholder="Unsweetened price" /><button type="button" class="remove-option-btn">Remove</button></div>`).join("")}</div></div>`;
+  }
+  productFields.querySelectorAll(".add-option-btn").forEach((button) => button.addEventListener("click", () => addOptionRow(button.dataset.group)));
+  productFields.querySelectorAll(".remove-option-btn").forEach((button) => button.addEventListener("click", () => button.closest(".option-row").remove()));
+}
+
+function addOptionRow(group) {
+  const container = document.getElementById(group);
+  if (!container) return;
+  if (group === "sizes") container.insertAdjacentHTML("beforeend", optionRows({ "": "" }, group, true));
+  else if (group === "sweetness-prices") container.insertAdjacentHTML("beforeend", `<div class="option-row sweetness-row"><input data-size placeholder="Size" /><input data-sweetened type="number" min="0" step="0.01" placeholder="Sweetened price" /><input data-unsweetened type="number" min="0" step="0.01" placeholder="Unsweetened price" /><button type="button" class="remove-option-btn">Remove</button></div>`);
+  else container.insertAdjacentHTML("beforeend", optionRows({ "": "" }, group));
+  container.lastElementChild.querySelector(".remove-option-btn").addEventListener("click", (event) => event.currentTarget.closest(".option-row").remove());
+}
+
+function collectOptions(group, hasPrice = false) {
+  return [...document.querySelectorAll(`[data-option-group="${group}"]`)].reduce((options, row) => {
+    const id = row.querySelector("[data-option-id]").value.trim();
+    const value = row.querySelector(hasPrice ? "[data-option-price]" : "[data-option-label]").value;
+    if (id && value !== "") options[id] = hasPrice ? Number(value) : value.trim();
+    return options;
+  }, {});
+}
+
+function collectConfig(type) {
+  if (type === "brukina-custom") return { price: Number(document.getElementById("basePrice").value), toppings: collectOptions("brukina-toppings") };
+  if (type === "flavor-size") return { flavors: collectOptions("flavors"), sizes: collectOptions("sizes", true) };
+  if (type === "parfait-custom") return { price: Number(document.getElementById("basePrice").value), fruits: collectOptions("fruits"), toppings: collectOptions("toppings"), syrups: collectOptions("syrups") };
+  return { prices: [...document.querySelectorAll(".sweetness-row")].reduce((prices, row) => { const size = row.querySelector("[data-size]").value.trim(); const sweetened = row.querySelector("[data-sweetened]").value; const unsweetened = row.querySelector("[data-unsweetened]").value; if (size && sweetened !== "" && unsweetened !== "") prices[size] = { sweetened: Number(sweetened), unsweetened: Number(unsweetened) }; return prices; }, {}) };
+}
+
+function openProductModal(product = null) {
   productForm.reset();
-  document.getElementById("productCategory").value = "Fresh Beverage";
-  document.getElementById("productSortOrder").value = "0";
-  document.getElementById("productConfig").value = JSON.stringify(PRODUCT_CONFIG_TEMPLATES["brukina-custom"], null, 2);
+  editingProductId = product?.id || null;
+  document.getElementById("productModalTitle").textContent = product ? `Edit ${product.name}` : "Add product";
+  document.getElementById("productId").value = product?.id || "";
+  document.getElementById("productId").disabled = Boolean(product);
+  document.getElementById("productName").value = product?.name || "";
+  document.getElementById("productCategory").value = product?.category || "Fresh Beverage";
+  document.getElementById("productType").value = product?.type || "brukina-custom";
+  document.getElementById("productType").disabled = Boolean(product);
+  document.getElementById("productStatus").value = product?.status || "available";
+  document.getElementById("productSortOrder").value = product?.sortOrder || 0;
+  document.getElementById("productImageUrl").value = product?.image || "";
+  document.getElementById("productDescription").value = product?.description || "";
+  renderProductFields(product?.type || "brukina-custom", product || {});
   productFormError.hidden = true;
   productModal.hidden = false;
 }
@@ -725,14 +782,15 @@ document.querySelectorAll(".dashboard-tab").forEach((button) => button.addEventL
 
 addProductBtn.addEventListener("click", openProductModal);
 document.querySelectorAll("[data-close-product-modal]").forEach((button) => button.addEventListener("click", closeProductModal));
-document.getElementById("productType").addEventListener("change", (event) => { document.getElementById("productConfig").value = JSON.stringify(PRODUCT_CONFIG_TEMPLATES[event.target.value], null, 2); });
+document.getElementById("productType").addEventListener("change", (event) => renderProductFields(event.target.value));
 productForm.addEventListener("submit", async (event) => {
   event.preventDefault(); productFormError.hidden = true;
-  let config;
-  try { config = JSON.parse(document.getElementById("productConfig").value); } catch { productFormError.textContent = "Configuration must be valid JSON."; productFormError.hidden = false; return; }
-  const payload = { id: document.getElementById("productId").value.trim(), name: document.getElementById("productName").value.trim(), category: document.getElementById("productCategory").value.trim(), type: document.getElementById("productType").value, status: document.getElementById("productStatus").value, sortOrder: Number(document.getElementById("productSortOrder").value), image: document.getElementById("productImageUrl").value.trim(), description: document.getElementById("productDescription").value.trim(), config };
+  const type = document.getElementById("productType").value;
+  const payload = { id: document.getElementById("productId").value.trim(), name: document.getElementById("productName").value.trim(), category: document.getElementById("productCategory").value.trim(), type, status: document.getElementById("productStatus").value, sortOrder: Number(document.getElementById("productSortOrder").value), image: document.getElementById("productImageUrl").value.trim(), description: document.getElementById("productDescription").value.trim(), config: collectConfig(type) };
   try {
-    const response = await fetch(`${API_URL}/api/admin/products`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("aoAdminToken")}` }, body: JSON.stringify(payload) });
+    const url = editingProductId ? `${API_URL}/api/admin/products/${encodeURIComponent(editingProductId)}` : `${API_URL}/api/admin/products`;
+    if (editingProductId) delete payload.id;
+    const response = await fetch(url, { method: editingProductId ? "PATCH" : "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("aoAdminToken")}` }, body: JSON.stringify(payload) });
     const data = await response.json(); if (!response.ok) throw new Error(data.message);
     closeProductModal(); loadProducts();
   } catch (error) { productFormError.textContent = error.message || "Could not save product."; productFormError.hidden = false; }

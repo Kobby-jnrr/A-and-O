@@ -314,11 +314,14 @@ app.post("/api/orders", async (req, res) => {
 
       if (product.type === "brukina-custom") {
         unitPrice = product.price;
-
-        const coconutFlakes =
-          item.includeCoconut === true || item.includeCoconut === "true";
-
-        description = coconutFlakes ? "With Coconut Flakes" : "Standard";
+        const toppings = Array.isArray(item.toppings) ? item.toppings : [];
+        const allowedToppings = product.toppings || { coconut_flakes: "Coconut Flakes" };
+        if (toppings.some((topping) => !allowedToppings[topping])) {
+          return res.status(400).json({ message: "Invalid Brukina topping selected." });
+        }
+        description = toppings.length
+          ? `Toppings: ${toppings.map((topping) => allowedToppings[topping]).join(", ")}`
+          : "Standard";
       }
 
       // ------------------------------------------------------

@@ -101,7 +101,8 @@ function getCartItemDescription(product, options = {}) {
   }
 
   if (product.type === "brukina-custom") {
-    return options.includeCoconut ? "Coconut Flakes" : "Standard";
+    const toppingNames = (options.toppings || []).map((id) => product.toppings?.[id]).filter(Boolean);
+    return toppingNames.length ? `Toppings: ${toppingNames.join(", ")}` : "Standard";
   }
 
   if (product.type === "flavor-size") {
@@ -302,34 +303,17 @@ function renderProduct(product) {
 
 function renderCustomization(product) {
   if (product.type === "brukina-custom") {
+    const toppings = product.toppings || { coconut_flakes: "Coconut Flakes" };
     return `
       <div class="customize-grid">
 
         <div class="customize-field">
 
-          <label>
-            Coconut flakes
-          </label>
+          <label>Toppings</label>
 
           <div class="option-list">
 
-            <button
-              type="button"
-              class="option-button active"
-              data-brukina-coconut="false"
-              aria-pressed="true"
-            >
-              Standard
-            </button>
-
-            <button
-              type="button"
-              class="option-button"
-              data-brukina-coconut="true"
-              aria-pressed="false"
-            >
-              Add Coconut Flakes
-            </button>
+            ${Object.entries(toppings).map(([id, label]) => `<button type="button" class="option-button brukina-topping-option" data-brukina-topping="${escapeHtml(id)}" aria-pressed="false">${escapeHtml(label)}</button>`).join("")}
 
           </div>
 
@@ -664,23 +648,10 @@ function initializeProductInteractions() {
      BRUKINA OPTION
   --------------------------------------------------------- */
 
-  $$(".option-button[data-brukina-coconut]").forEach((button) => {
+  $$(".brukina-topping-option").forEach((button) => {
     button.addEventListener("click", () => {
-      const box = button.closest(".customize-box");
-
-      if (!box) {
-        return;
-      }
-
-      box
-        .querySelectorAll(".option-button[data-brukina-coconut]")
-        .forEach((option) => {
-          option.classList.remove("active");
-          option.setAttribute("aria-pressed", "false");
-        });
-
-      button.classList.add("active");
-      button.setAttribute("aria-pressed", "true");
+      button.classList.toggle("active");
+      button.setAttribute("aria-pressed", button.classList.contains("active") ? "true" : "false");
     });
   });
 
@@ -876,11 +847,8 @@ function addCustomizedProduct(productId) {
   --------------------------------------------------------- */
 
   if (product.type === "brukina-custom") {
-    const selectedCoconut = box.querySelector(
-      '[data-brukina-coconut="true"].active',
-    );
-
-    options.includeCoconut = Boolean(selectedCoconut);
+    options.toppings = [...box.querySelectorAll(".brukina-topping-option.active")].map((button) => button.dataset.brukinaTopping);
+    options.includeCoconut = options.toppings.includes("coconut_flakes");
   }
 
   /* ---------------------------------------------------------

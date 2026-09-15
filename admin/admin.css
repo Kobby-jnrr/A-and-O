@@ -764,19 +764,30 @@ select {
 
 .product-card {
   display: grid;
-  gap: 14px;
-  padding: 20px;
+  gap: 18px;
+  padding: 22px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: #fff;
 }
 
-.product-card h3 { margin: 7px 0 3px; color: var(--text-strong); }
+.product-card h3 { margin: 7px 0 3px; color: var(--text-strong); font-size: 1.25rem; }
 .product-card p { margin: 0; color: var(--text-dim); }
 .product-card label { display: grid; gap: 6px; color: var(--text-dim); font-size: .8rem; font-weight: 700; }
 .product-card select { padding: 10px; border: 1px solid var(--border); border-radius: 9px; background: #fff; }
 .product-type { color: var(--accent); font-size: .7rem; font-weight: 800; text-transform: uppercase; }
-.delete-product-btn { justify-self: start; padding: 9px 13px; border: 1px solid #efb5b5; border-radius: 9px; background: #fff5f5; color: #a52727; font-weight: 700; }
+.product-status-row { display: grid; gap: 10px; }
+.status-pill { width: fit-content; padding: 5px 9px; border-radius: 999px; font-size: .7rem; font-weight: 800; text-transform: uppercase; }
+.status-available { background: #dcfce7; color: #166534; }
+.status-out_of_stock { background: #fef3c7; color: #92400e; }
+.status-unavailable { background: #e2e8f0; color: #475569; }
+.availability-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.availability-btn { padding: 7px 9px; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--text-dim); font-size: .72rem; font-weight: 700; }
+.availability-btn.selected { border-color: var(--accent); background: #eaf2ff; color: var(--accent-deep); }
+.product-card-actions { display: flex; justify-content: space-between; gap: 10px; padding-top: 14px; border-top: 1px solid var(--border-soft); }
+.edit-product-btn, .delete-product-btn { padding: 9px 13px; border-radius: 9px; font-weight: 700; }
+.edit-product-btn { border: 1px solid var(--accent); background: #eef5ff; color: var(--accent-deep); }
+.delete-product-btn { border: 1px solid #efb5b5; background: #fff5f5; color: #a52727; }
 
 .product-modal { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; }
 .product-modal[hidden] { display: none; }
@@ -790,8 +801,18 @@ select {
 .product-form input, .product-form select, .product-form textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 9px; font: inherit; }
 .product-form textarea { resize: vertical; }
 .product-form .full-width, .product-form .error-message, .product-form .primary-btn { grid-column: 1 / -1; }
+.product-fields { display: grid; gap: 14px; }
+.product-fields h3 { margin: 0; color: var(--text-strong); font-size: 1rem; }
+.product-fields > label { max-width: 260px; }
+.options-editor { padding: 15px; border: 1px solid var(--border-soft); border-radius: 12px; background: #f9fcff; }
+.options-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; color: var(--text-strong); font-size: .85rem; }
+.add-option-btn { padding: 7px 10px; border: 1px solid var(--accent); border-radius: 8px; background: #fff; color: var(--accent-deep); font-size: .75rem; font-weight: 700; }
+.option-row { display: grid; grid-template-columns: 1fr 1.4fr 1fr auto; gap: 8px; margin-top: 8px; }
+.option-row:not(:has([data-option-price])) { grid-template-columns: 1fr 1.4fr auto; }
+.sweetness-row { grid-template-columns: 1fr 1fr 1fr auto; }
+.remove-option-btn { padding: 7px 9px; border: 1px solid #f0c8c8; border-radius: 8px; background: #fff5f5; color: #a52727; font-size: .72rem; font-weight: 700; }
 
-@media (max-width: 600px) { .products-section { padding: 20px; } .product-form { grid-template-columns: 1fr; } .product-form .full-width, .product-form .error-message, .product-form .primary-btn { grid-column: auto; } }
+@media (max-width: 600px) { .products-section { padding: 20px; } .product-form { grid-template-columns: 1fr; } .product-form .full-width, .product-form .error-message, .product-form .primary-btn { grid-column: auto; } .option-row, .option-row:not(:has([data-option-price])), .sweetness-row { grid-template-columns: 1fr; } }
 
 .section-heading {
   display: flex;

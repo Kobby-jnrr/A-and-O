@@ -220,7 +220,7 @@
         <button type="button" class="modal-close" data-close-product-modal aria-label="Close">&times;</button>
         <span class="eyebrow">PRODUCT CATALOGUE</span>
         <h2 id="productModalTitle">Add product</h2>
-        <p class="product-form-help">Configure the options as JSON. Templates are supplied when you choose a product type.</p>
+        <p class="product-form-help">Set the customer-facing details, prices, and options below. No JSON required.</p>
         <form id="productForm" class="product-form">
           <label>Product ID <input id="productId" required placeholder="e.g. E" pattern="[A-Za-z0-9_-]+" /></label>
           <label>Name <input id="productName" required placeholder="Product name" /></label>
@@ -239,7 +239,7 @@
           <label>Sort order <input id="productSortOrder" type="number" value="0" /></label>
           <label>Image URL <input id="productImageUrl" type="url" placeholder="https://..." /></label>
           <label class="full-width">Description <textarea id="productDescription" rows="2"></textarea></label>
-          <label class="full-width">Configuration JSON <textarea id="productConfig" rows="12" required></textarea></label>
+          <div id="productFields" class="product-fields full-width"></div>
           <p id="productFormError" class="error-message" hidden></p>
           <button type="submit" class="primary-btn">Save product</button>
         </form>

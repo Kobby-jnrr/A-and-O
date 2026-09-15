@@ -3,7 +3,7 @@
    Main frontend JavaScript
 ========================================================= */
 
-const API_BASE_URL = "https://a-and-o-beverages.onrender.com/api";
+const API_BASE_URL = "http://localhost:3000/api";
 const CURRENCY = "GHS";
 
 const MAX_PARFAIT_FRUITS = 3;
@@ -27,6 +27,7 @@ let deliveryLocation = {
 };
 
 let trackingOrderNumber = "";
+let paystackOrderProcessing = false;
 
 /* =========================================================
    DOM HELPERS
@@ -1648,116 +1649,140 @@ async function submitOrder(event) {
         showSmallNotice("Payment was not completed.");
       },
 
-      async onSuccess(transaction) {
-        // -------------------------------------------------------
-        // Step 3 — Payment succeeded; place the order on our server
-        // -------------------------------------------------------
-        if (submitButton) {
-          submitButton.textContent = "Placing your order...";
-        }
-
+      callback: function (transaction) {
         try {
-          // Show confirmation immediately using the Paystack reference
-          // (will be replaced if server returns an official order number)
-          try {
-            showOrderSuccess(transaction.reference, amountGHS);
-          } catch (e) {
-            // ignore UI errors
-          }
-          const orderPayload = {
-            customerName,
-
-            customerPhone,
-
-            orderMethod,
-
-            deliveryAddress:
-              orderMethod === "Delivery" ? deliveryAddress || null : null,
-
-            locationLat:
-              orderMethod === "Delivery" ? deliveryLocation.lat : null,
-
-            locationLng:
-              orderMethod === "Delivery" ? deliveryLocation.lng : null,
-
-            locationLink:
-              orderMethod === "Delivery" ? deliveryLocation.link : null,
-
-            paystackReference: transaction.reference,
-
-            items: cart.map((item) => ({
-              productId: item.productId,
-
-              quantity: item.quantity,
-
-              includeCoconut: item.options?.includeCoconut || false,
-
-              flavorId: item.options?.flavorId || null,
-
-              sizeId: item.options?.sizeId || null,
-
-              fruits: item.options?.fruits || [],
-
-              toppings: item.options?.toppings || [],
-
-              syrupId: item.options?.syrupId || "none",
-
-              sweetnessId: item.options?.sweetnessId || null,
-            })),
-          };
-
-          const response = await fetch(`${API_BASE_URL}/orders`, {
-            method: "POST",
-
-            headers: { "Content-Type": "application/json" },
-
-            body: JSON.stringify(orderPayload),
-          });
-
-          const data = await response.json().catch(() => ({}));
-
-          if (!response.ok) {
-            throw new Error(
-              data.message ||
-                "Payment succeeded but order could not be saved. Please contact us.",
-            );
-          }
-
-          if (data.orderNumber) {
-            localStorage.setItem("aoLatestOrderNumber", data.orderNumber);
-          }
-
-          cart = [];
-
-          renderCart();
-
-          updateCartBadge();
-
-          updateMomoAmount();
-
-          resetOrderForm();
-
-          closeDrawer();
-
-          showOrderSuccess(data.orderNumber, data.totalAmount);
-        } catch (orderError) {
-          console.error("Order save error after payment:", orderError);
-
           showSmallNotice(
-            orderError.message ||
-              "Your payment went through but we couldn't record your order. Please contact us immediately.",
+            "Payment confirmed by Paystack — finalizing order...",
           );
-        } finally {
-          if (submitButton) {
-            submitButton.disabled = false;
+        } catch (e) {}
+        if (submitButton) submitButton.textContent = "Placing your order...";
 
-            submitButton.textContent = "Pay & Place Order";
-          }
-        }
+        // Call the async handler in a microtask so we pass a plain function to Paystack
+        setTimeout(() => {
+          (async () => {
+            try {
+              console.log("Paystack callback", transaction);
+              await placeOrderWithReference(transaction.reference);
+            } catch (err) {
+              console.error("Error in paystack callback wrapper:", err);
+            }
+          })();
+        }, 0);
       },
     });
 
+    // Helper to post the order to the backend given a Paystack reference
+    async function placeOrderWithReference(ref) {
+      if (!ref || paystackOrderProcessing) return;
+      paystackOrderProcessing = true;
+
+      try {
+        try {
+          showOrderSuccess(ref, amountGHS);
+        } catch (e) {}
+
+        const orderPayload = {
+          customerName,
+          customerPhone,
+          orderMethod,
+          deliveryAddress:
+            orderMethod === "Delivery" ? deliveryAddress || null : null,
+          locationLat: orderMethod === "Delivery" ? deliveryLocation.lat : null,
+          locationLng: orderMethod === "Delivery" ? deliveryLocation.lng : null,
+          locationLink:
+            orderMethod === "Delivery" ? deliveryLocation.link : null,
+          paystackReference: ref,
+          items: cart.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            includeCoconut: item.options?.includeCoconut || false,
+            flavorId: item.options?.flavorId || null,
+            sizeId: item.options?.sizeId || null,
+            fruits: item.options?.fruits || [],
+            toppings: item.options?.toppings || [],
+            syrupId: item.options?.syrupId || "none",
+            sweetnessId: item.options?.sweetnessId || null,
+          })),
+        };
+
+        const response = await fetch(`${API_BASE_URL}/orders`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(orderPayload),
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok)
+          throw new Error(data.message || "Could not save order.");
+
+        if (data.orderNumber)
+          localStorage.setItem("aoLatestOrderNumber", data.orderNumber);
+
+        cart = [];
+        renderCart();
+        updateCartBadge();
+        updateMomoAmount();
+        resetOrderForm();
+        closeDrawer();
+        showOrderSuccess(
+          data.orderNumber || ref,
+          data.totalAmount || amountGHS,
+        );
+      } catch (orderError) {
+        console.error("Order save error after payment:", orderError);
+        showSmallNotice(
+          orderError.message ||
+            "Your payment went through but we couldn't record your order.",
+        );
+      } finally {
+        paystackOrderProcessing = false;
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = "Pay & Place Order";
+        }
+      }
+    }
+
     handler.openIframe();
+
+    // Poll Paystack via backend verify endpoint for flows that don't immediately call back
+    (function startPolling(referenceToCheck) {
+      const pollInterval = 3000;
+      const maxAttempts = 40;
+      let attempts = 0;
+
+      const id = setInterval(async () => {
+        attempts += 1;
+        if (paystackOrderProcessing || attempts > maxAttempts) {
+          clearInterval(id);
+          if (attempts > maxAttempts) {
+            showSmallNotice(
+              "Payment pending — please complete the authorization on your device.",
+            );
+            if (submitButton) {
+              submitButton.disabled = false;
+              submitButton.textContent = "Pay & Place Order";
+            }
+          }
+          return;
+        }
+
+        try {
+          const resp = await fetch(
+            `${API_BASE_URL}/paystack/verify/${encodeURIComponent(referenceToCheck)}`,
+          );
+          const json = await resp.json().catch(() => ({}));
+
+          if (resp.ok && json.status === "success") {
+            clearInterval(id);
+            await placeOrderWithReference(referenceToCheck);
+          }
+        } catch (e) {
+          // ignore transient errors
+        }
+      }, pollInterval);
+    })(reference);
   } catch (error) {
     console.error("Paystack init error:", error);
 

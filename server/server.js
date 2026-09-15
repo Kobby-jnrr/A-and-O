@@ -4,6 +4,7 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const axios = require("axios");
+const crypto = require("crypto");
 
 const db = require("./database");
 const { login, authenticateToken } = require("./auth");
@@ -46,11 +47,20 @@ function validateProductInput(input, { requireId = false } = {}) {
   if (requireId || product.id !== undefined) {
     result.id = String(product.id || "").trim();
     if (!result.id || !/^[A-Za-z0-9_-]+$/.test(result.id)) {
-      throw new Error("Product ID may only use letters, numbers, hyphens, and underscores.");
+      throw new Error(
+        "Product ID may only use letters, numbers, hyphens, and underscores.",
+      );
     }
   }
 
-  for (const field of ["name", "category", "type", "status", "description", "image_url"]) {
+  for (const field of [
+    "name",
+    "category",
+    "type",
+    "status",
+    "description",
+    "image_url",
+  ]) {
     if (product[field] !== undefined) result[field] = product[field];
   }
   if (product.image !== undefined) result.image_url = product.image;
@@ -58,11 +68,24 @@ function validateProductInput(input, { requireId = false } = {}) {
   if (product.sortOrder !== undefined) result.sort_order = product.sortOrder;
   if (product.config !== undefined) result.config = product.config;
 
-  if (result.name !== undefined && !String(result.name).trim()) throw new Error("Product name is required.");
-  if (result.type !== undefined && !PRODUCT_TYPES.includes(result.type)) throw new Error("Invalid product type.");
-  if (result.status !== undefined && !PRODUCT_STATUSES.includes(result.status)) throw new Error("Invalid product status.");
-  if (result.sort_order !== undefined && !Number.isInteger(Number(result.sort_order))) throw new Error("Sort order must be a whole number.");
-  if (result.config !== undefined && (!result.config || typeof result.config !== "object" || Array.isArray(result.config))) throw new Error("Product configuration must be an object.");
+  if (result.name !== undefined && !String(result.name).trim())
+    throw new Error("Product name is required.");
+  if (result.type !== undefined && !PRODUCT_TYPES.includes(result.type))
+    throw new Error("Invalid product type.");
+  if (result.status !== undefined && !PRODUCT_STATUSES.includes(result.status))
+    throw new Error("Invalid product status.");
+  if (
+    result.sort_order !== undefined &&
+    !Number.isInteger(Number(result.sort_order))
+  )
+    throw new Error("Sort order must be a whole number.");
+  if (
+    result.config !== undefined &&
+    (!result.config ||
+      typeof result.config !== "object" ||
+      Array.isArray(result.config))
+  )
+    throw new Error("Product configuration must be an object.");
 
   return result;
 }
@@ -72,6 +95,74 @@ function validateProductInput(input, { requireId = false } = {}) {
 // ============================================================
 
 app.use(cors());
+
+// Paystack webhook needs the raw request body for signature verification.
+// We'll register a per-route raw body parser below for the webhook and
+// keep the JSON body parser for other routes.
+
+// ============================================================
+// PAYSTACK WEBHOOK
+// ============================================================
+
+app.post(
+  "/api/paystack/webhook",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    try {
+      const secret = process.env.PAYSTACK_SECRET_KEY || "";
+
+      const signature = req.headers["x-paystack-signature"];
+
+      const hash = crypto
+        .createHmac("sha512", secret)
+        .update(req.body)
+        .digest("hex");
+
+      if (!signature || hash !== signature) {
+        console.warn("Invalid Paystack webhook signature", { signature, hash });
+        return res.status(400).send("Invalid signature");
+      }
+
+      const event = JSON.parse(req.body.toString());
+
+      console.log("Paystack webhook event:", event.event);
+
+      if (event.event === "charge.success") {
+        const reference = event.data?.reference;
+
+        if (reference) {
+          try {
+            const result = await db.query(
+              `UPDATE orders SET payment_status = 'Verified', order_status = 'Processing', updated_at = CURRENT_TIMESTAMP WHERE momo_reference = $1 AND payment_status != 'Verified' RETURNING order_number, id, total_amount`,
+              [String(reference)],
+            );
+
+            if (result.rows.length > 0) {
+              console.log(
+                "Order verified via webhook:",
+                result.rows[0].order_number,
+              );
+            } else {
+              console.log(
+                "Webhook: no matching order for reference",
+                reference,
+              );
+            }
+          } catch (dbErr) {
+            console.error("Webhook DB error:", dbErr);
+          }
+        }
+      }
+
+      res.status(200).send("OK");
+    } catch (error) {
+      console.error("Paystack webhook handler error:", error);
+      res.status(500).send("Webhook handler error");
+    }
+  },
+);
+
+// Now enable JSON body parsing for the rest of the routes
 app.use(express.json());
 
 app.use("/admin", express.static(path.join(__dirname, "..", "admin")));
@@ -122,6 +213,60 @@ app.get("/", (req, res) => {
   res.json({
     message: "A and O Beverages backend is running.",
   });
+});
+
+// ============================================================
+// PAYSTACK — VERIFY TRANSACTION (proxy for frontend polling)
+// ============================================================
+
+app.get("/api/paystack/verify/:reference", async (req, res) => {
+  try {
+    const reference = String(req.params.reference || "").trim();
+
+    if (!reference) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Reference is required." });
+    }
+
+    const verifyRes = await axios.get(
+      `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+        },
+      },
+    );
+
+    const txn = verifyRes.data?.data;
+
+    if (!txn) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Transaction not found." });
+    }
+
+    return res.json({
+      success: true,
+      status: txn.status,
+      reference: txn.reference,
+      amount: txn.amount,
+      channel: txn.channel,
+      authorization: txn.authorization || null,
+      raw: txn,
+    });
+  } catch (error) {
+    console.error(
+      "Paystack verify proxy error:",
+      error?.response?.data || error.message,
+    );
+
+    const status = error?.response?.status || 500;
+
+    return res
+      .status(status)
+      .json({ success: false, message: "Could not verify transaction." });
+  }
 });
 
 // ============================================================
@@ -267,10 +412,14 @@ app.post("/api/orders", async (req, res) => {
       // Paystack returns amount in kobo (pesewas for GHS)
       verifiedAmount = txn.amount / 100;
     } catch (verifyError) {
-      console.error("Paystack verify error:", verifyError?.response?.data || verifyError.message);
+      console.error(
+        "Paystack verify error:",
+        verifyError?.response?.data || verifyError.message,
+      );
 
       return res.status(400).json({
-        message: "We could not verify your payment. Please contact us if payment was deducted.",
+        message:
+          "We could not verify your payment. Please contact us if payment was deducted.",
       });
     }
 
@@ -315,9 +464,13 @@ app.post("/api/orders", async (req, res) => {
       if (product.type === "brukina-custom") {
         unitPrice = product.price;
         const toppings = Array.isArray(item.toppings) ? item.toppings : [];
-        const allowedToppings = product.toppings || { coconut_flakes: "Coconut Flakes" };
+        const allowedToppings = product.toppings || {
+          coconut_flakes: "Coconut Flakes",
+        };
         if (toppings.some((topping) => !allowedToppings[topping])) {
-          return res.status(400).json({ message: "Invalid Brukina topping selected." });
+          return res
+            .status(400)
+            .json({ message: "Invalid Brukina topping selected." });
         }
         description = toppings.length
           ? `Toppings: ${toppings.map((topping) => allowedToppings[topping]).join(", ")}`
@@ -442,7 +595,9 @@ app.post("/api/orders", async (req, res) => {
 
         description = `${size} - ${displaySweetness}`;
       } else {
-        return res.status(400).json({ message: "This product has an unsupported configuration." });
+        return res
+          .status(400)
+          .json({ message: "This product has an unsupported configuration." });
       }
 
       calculatedTotal += unitPrice * quantity;
@@ -703,7 +858,9 @@ app.get("/api/orders/track/:orderNumber", async (req, res) => {
 
 app.get("/api/admin/products", authenticateToken, async (req, res) => {
   try {
-    const result = await db.query("SELECT * FROM products ORDER BY sort_order, name");
+    const result = await db.query(
+      "SELECT * FROM products ORDER BY sort_order, name",
+    );
     res.json(result.rows.map(productForApi));
   } catch (error) {
     console.error("Get admin products error:", error);
@@ -715,19 +872,38 @@ app.post("/api/admin/products", authenticateToken, async (req, res) => {
   try {
     const product = validateProductInput(req.body, { requireId: true });
     if (!product.name || !product.type || !product.config) {
-      return res.status(400).json({ message: "Product ID, name, type, and configuration are required." });
+      return res
+        .status(400)
+        .json({
+          message: "Product ID, name, type, and configuration are required.",
+        });
     }
     const result = await db.query(
       `INSERT INTO products (id, name, category, type, config, image_url, description, status, sort_order)
        VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9) RETURNING *`,
-      [product.id, String(product.name).trim(), String(product.category || "Beverage").trim(), product.type,
-        JSON.stringify(product.config), product.image_url || null, product.description || null,
-        product.status || "available", Number(product.sort_order || 0)],
+      [
+        product.id,
+        String(product.name).trim(),
+        String(product.category || "Beverage").trim(),
+        product.type,
+        JSON.stringify(product.config),
+        product.image_url || null,
+        product.description || null,
+        product.status || "available",
+        Number(product.sort_order || 0),
+      ],
     );
     res.status(201).json(productForApi(result.rows[0]));
   } catch (error) {
     console.error("Create product error:", error);
-    res.status(error.code === "23505" ? 409 : 400).json({ message: error.code === "23505" ? "That product ID already exists." : error.message || "Could not create product." });
+    res
+      .status(error.code === "23505" ? 409 : 400)
+      .json({
+        message:
+          error.code === "23505"
+            ? "That product ID already exists."
+            : error.message || "Could not create product.",
+      });
   }
 });
 
@@ -736,28 +912,58 @@ app.patch("/api/admin/products/:id", authenticateToken, async (req, res) => {
     const product = validateProductInput(req.body);
     const fields = [];
     const values = [];
-    const columns = { name: "name", category: "category", type: "type", config: "config", image_url: "image_url", description: "description", status: "status", sort_order: "sort_order" };
+    const columns = {
+      name: "name",
+      category: "category",
+      type: "type",
+      config: "config",
+      image_url: "image_url",
+      description: "description",
+      status: "status",
+      sort_order: "sort_order",
+    };
     for (const [key, column] of Object.entries(columns)) {
       if (product[key] !== undefined) {
-        values.push(key === "config" ? JSON.stringify(product[key]) : key === "sort_order" ? Number(product[key]) : product[key]);
-        fields.push(`${column} = $${values.length}${key === "config" ? "::jsonb" : ""}`);
+        values.push(
+          key === "config"
+            ? JSON.stringify(product[key])
+            : key === "sort_order"
+              ? Number(product[key])
+              : product[key],
+        );
+        fields.push(
+          `${column} = $${values.length}${key === "config" ? "::jsonb" : ""}`,
+        );
       }
     }
-    if (!fields.length) return res.status(400).json({ message: "No product changes were provided." });
+    if (!fields.length)
+      return res
+        .status(400)
+        .json({ message: "No product changes were provided." });
     values.push(String(req.params.id));
-    const result = await db.query(`UPDATE products SET ${fields.join(", ")} WHERE id = $${values.length} RETURNING *`, values);
-    if (!result.rows[0]) return res.status(404).json({ message: "Product not found." });
+    const result = await db.query(
+      `UPDATE products SET ${fields.join(", ")} WHERE id = $${values.length} RETURNING *`,
+      values,
+    );
+    if (!result.rows[0])
+      return res.status(404).json({ message: "Product not found." });
     res.json(productForApi(result.rows[0]));
   } catch (error) {
     console.error("Update product error:", error);
-    res.status(400).json({ message: error.message || "Could not update product." });
+    res
+      .status(400)
+      .json({ message: error.message || "Could not update product." });
   }
 });
 
 app.delete("/api/admin/products/:id", authenticateToken, async (req, res) => {
   try {
-    const result = await db.query("DELETE FROM products WHERE id = $1 RETURNING id", [String(req.params.id)]);
-    if (!result.rows[0]) return res.status(404).json({ message: "Product not found." });
+    const result = await db.query(
+      "DELETE FROM products WHERE id = $1 RETURNING id",
+      [String(req.params.id)],
+    );
+    if (!result.rows[0])
+      return res.status(404).json({ message: "Product not found." });
     res.status(204).end();
   } catch (error) {
     console.error("Delete product error:", error);

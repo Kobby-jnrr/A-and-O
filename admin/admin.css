@@ -769,8 +769,12 @@ select {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: #fff;
+  overflow: hidden;
 }
 
+.admin-product-image-wrap { margin: -22px -22px 0; height: 175px; overflow: hidden; background: #edf5ff; }
+.admin-product-image-wrap img { width: 100%; height: 100%; display: block; object-fit: cover; transition: transform 240ms ease; }
+.product-card:hover .admin-product-image-wrap img { transform: scale(1.03); }
 .product-card h3 { margin: 7px 0 3px; color: var(--text-strong); font-size: 1.25rem; }
 .product-card p { margin: 0; color: var(--text-dim); }
 .product-card label { display: grid; gap: 6px; color: var(--text-dim); font-size: .8rem; font-weight: 700; }
@@ -802,6 +806,13 @@ select {
 .product-form textarea { resize: vertical; }
 .product-form .full-width, .product-form .error-message, .product-form .primary-btn { grid-column: 1 / -1; }
 .product-fields { display: grid; gap: 14px; }
+.tap-picker { display: grid; gap: 8px; color: var(--text-dim); font-size: .8rem; font-weight: 700; }
+.tap-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.tap-options button { padding: 9px 12px; border: 1px solid var(--border); border-radius: 9px; background: #fff; color: var(--text-dim); font: inherit; font-size: .77rem; font-weight: 700; }
+.tap-options button.selected { border-color: var(--accent); background: #eaf2ff; color: var(--accent-deep); box-shadow: inset 0 0 0 1px var(--accent); }
+.tap-options button:disabled { cursor: default; opacity: .6; }
+.admin-image-preview { height: 92px; overflow: hidden; border: 1px solid var(--border); border-radius: 10px; background: #f3f7fc; }
+.admin-image-preview img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .product-fields h3 { margin: 0; color: var(--text-strong); font-size: 1rem; }
 .product-fields > label { max-width: 260px; }
 .options-editor { padding: 15px; border: 1px solid var(--border-soft); border-radius: 12px; background: #f9fcff; }

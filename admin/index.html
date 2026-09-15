@@ -225,19 +225,28 @@
           <label>Product ID <input id="productId" required placeholder="e.g. E" pattern="[A-Za-z0-9_-]+" /></label>
           <label>Name <input id="productName" required placeholder="Product name" /></label>
           <label>Category <input id="productCategory" value="Fresh Beverage" /></label>
-          <label>Type
-            <select id="productType" required>
-              <option value="brukina-custom">Brukina custom</option>
-              <option value="flavor-size">Flavor and size</option>
-              <option value="parfait-custom">Parfait custom</option>
-              <option value="size-sweetness">Size and sweetness</option>
-            </select>
-          </label>
-          <label>Status
-            <select id="productStatus"><option value="available">Available</option><option value="out_of_stock">Out of stock</option><option value="unavailable">Temporarily unavailable</option></select>
-          </label>
+          <div class="full-width tap-picker">
+            <span>Product type</span>
+            <input id="productType" type="hidden" value="brukina-custom" />
+            <div class="tap-options" data-picker="productType">
+              <button type="button" data-value="brukina-custom">Brukina</button>
+              <button type="button" data-value="flavor-size">Flavor &amp; size</button>
+              <button type="button" data-value="parfait-custom">Parfait</button>
+              <button type="button" data-value="size-sweetness">Size &amp; sweetness</button>
+            </div>
+          </div>
+          <div class="full-width tap-picker">
+            <span>Customer availability</span>
+            <input id="productStatus" type="hidden" value="available" />
+            <div class="tap-options" data-picker="productStatus">
+              <button type="button" data-value="available">In stock</button>
+              <button type="button" data-value="out_of_stock">Out of stock</button>
+              <button type="button" data-value="unavailable">Hide from customers</button>
+            </div>
+          </div>
           <label>Sort order <input id="productSortOrder" type="number" value="0" /></label>
           <label>Image URL <input id="productImageUrl" type="url" placeholder="https://..." /></label>
+          <div class="admin-image-preview"><img id="productImagePreview" alt="Product preview" /></div>
           <label class="full-width">Description <textarea id="productDescription" rows="2"></textarea></label>
           <div id="productFields" class="product-fields full-width"></div>
           <p id="productFormError" class="error-message" hidden></p>

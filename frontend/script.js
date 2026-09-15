@@ -101,8 +101,12 @@ function getCartItemDescription(product, options = {}) {
   }
 
   if (product.type === "brukina-custom") {
-    const toppingNames = (options.toppings || []).map((id) => product.toppings?.[id]).filter(Boolean);
-    return toppingNames.length ? `Toppings: ${toppingNames.join(", ")}` : "Standard";
+    const toppingNames = (options.toppings || [])
+      .map((id) => product.toppings?.[id])
+      .filter(Boolean);
+    return toppingNames.length
+      ? `Toppings: ${toppingNames.join(", ")}`
+      : "Standard";
   }
 
   if (product.type === "flavor-size") {
@@ -154,10 +158,8 @@ function getCartItemDescription(product, options = {}) {
   }
 
   if (product.type === "size-sweetness") {
-    const sizeName = options.sizeId === "500ml" ? "500 ml" : "1 Liter";
-
-    const sweetnessName =
-      options.sweetnessId === "sweetened" ? "Sweetened" : "Unsweetened";
+    const sizeName = formatOptionLabel(options.sizeId);
+    const sweetnessName = formatOptionLabel(options.sweetnessId);
 
     return `${sizeName} - ${sweetnessName}`;
   }
@@ -171,7 +173,8 @@ function getCartItemDescription(product, options = {}) {
 
 async function loadProducts() {
   const productList = $("#productList");
-  if (productList) productList.innerHTML = `<p class="placeholder-note">Loading products...</p>`;
+  if (productList)
+    productList.innerHTML = `<p class="placeholder-note">Loading products...</p>`;
 
   try {
     const response = await fetch(`${API_BASE_URL}/products`);
@@ -183,15 +186,30 @@ async function loadProducts() {
       );
     }
     const products = await response.json();
-    PRODUCTS = (Array.isArray(products) ? products : []).reduce((map, product) => {
-      map[product.id] = product;
-      return map;
-    }, {});
+    PRODUCTS = (Array.isArray(products) ? products : []).reduce(
+      (map, product) => {
+        map[product.id] = product;
+        return map;
+      },
+      {},
+    );
     renderProducts();
   } catch (error) {
     console.error("Could not load products:", error);
-    if (productList) productList.innerHTML = `<p class="placeholder-note">${escapeHtml(error.message || "Products are unavailable right now. Please refresh and try again.")}</p>`;
+    if (productList)
+      productList.innerHTML = `<p class="placeholder-note">${escapeHtml(error.message || "Products are unavailable right now. Please refresh and try again.")}</p>`;
   }
+}
+
+function formatOptionLabel(value) {
+  return String(value)
+    .replace(/^(\d+)ml$/i, "$1 ml")
+    .replace(/^(\d+)l$/i, "$1 L")
+    .replace(
+      /(^|[_-])(\w)/g,
+      (_, prefix, letter) =>
+        `${prefix === "_" || prefix === "-" ? " " : ""}${letter.toUpperCase()}`,
+    );
 }
 
 function renderProducts() {
@@ -278,20 +296,24 @@ function renderProduct(product) {
           type="button"
           class="product-add-btn"
           data-product-id="${escapeHtml(product.id)}"
-          ${outOfStock ? "disabled aria-disabled=\"true\"" : ""}
+          ${outOfStock ? 'disabled aria-disabled="true"' : ""}
         >
           ${outOfStock ? "Out of stock" : "Customize"}
         </button>
 
       </div>
 
-      ${outOfStock ? "" : `<div
+      ${
+        outOfStock
+          ? ""
+          : `<div
         class="customize-box"
         data-customize-box="${escapeHtml(product.id)}"
         hidden
       >
         ${renderCustomization(product)}
-      </div>`}
+      </div>`
+      }
 
     </article>
   `;
@@ -313,7 +335,12 @@ function renderCustomization(product) {
 
           <div class="option-list">
 
-            ${Object.entries(toppings).map(([id, label]) => `<button type="button" class="option-button brukina-topping-option" data-brukina-topping="${escapeHtml(id)}" aria-pressed="false">${escapeHtml(label)}</button>`).join("")}
+            ${Object.entries(toppings)
+              .map(
+                ([id, label]) =>
+                  `<button type="button" class="option-button brukina-topping-option" data-brukina-topping="${escapeHtml(id)}" aria-pressed="false">${escapeHtml(label)}</button>`,
+              )
+              .join("")}
 
           </div>
 
@@ -348,6 +375,9 @@ function renderCustomization(product) {
   }
 
   if (product.type === "flavor-size") {
+    const defaultSize = Object.keys(product.sizes || {}).includes("500ml")
+      ? "500ml"
+      : Object.keys(product.sizes || {})[0];
     return `
       <div class="customize-grid">
 
@@ -390,23 +420,16 @@ function renderCustomization(product) {
 
             ${Object.entries(product.sizes)
               .map(
-                ([id, price], index) => `
+                ([id, price]) => `
                   <button
                     type="button"
                     class="option-button size-option ${
-                      index === 0 ? "active" : ""
+                      id === defaultSize ? "active" : ""
                     }"
                     data-size-id="${escapeHtml(id)}"
-                    aria-pressed="${index === 0 ? "true" : "false"}"
+                    aria-pressed="${id === defaultSize ? "true" : "false"}"
                   >
-                    ${
-                      id === "500ml"
-                        ? "500 ml"
-                        : id === "300ml"
-                          ? "300 ml"
-                          : "250 ml"
-                    }
-                    — ${formatMoney(price)}
+                    ${escapeHtml(formatOptionLabel(id))}
                   </button>
                 `,
               )
@@ -414,6 +437,11 @@ function renderCustomization(product) {
 
           </div>
 
+        </div>
+
+        <div class="customize-field">
+          <label>Price</label>
+          <div class="product-price" data-custom-price="${escapeHtml(product.id)}">${formatMoney(product.sizes?.[defaultSize])}</div>
         </div>
 
       </div>
@@ -553,7 +581,17 @@ function renderCustomization(product) {
 
   if (product.type === "size-sweetness") {
     const sizes = Object.keys(product.prices || {});
-    const sweetnesses = [...new Set(Object.values(product.prices || {}).flatMap((prices) => Object.keys(prices || {})))];
+    const sweetnesses = [
+      ...new Set(
+        Object.values(product.prices || {}).flatMap((prices) =>
+          Object.keys(prices || {}),
+        ),
+      ),
+    ];
+    const defaultSize = sizes.includes("1l") ? "1l" : sizes[0];
+    const defaultSweetness = sweetnesses.includes("sweetened")
+      ? "sweetened"
+      : sweetnesses[0];
     return `
       <div class="customize-grid">
 
@@ -565,7 +603,7 @@ function renderCustomization(product) {
 
           <div class="option-list">
 
-            ${sizes.map((size, index) => `<button type="button" class="option-button greek-size-option ${index === 0 ? "active" : ""}" data-greek-size="${escapeHtml(size)}" aria-pressed="${index === 0}">${escapeHtml(size)}</button>`).join("")}
+            ${sizes.map((size) => `<button type="button" class="option-button greek-size-option ${size === defaultSize ? "active" : ""}" data-greek-size="${escapeHtml(size)}" aria-pressed="${size === defaultSize}">${escapeHtml(formatOptionLabel(size))}</button>`).join("")}
 
           </div>
 
@@ -579,10 +617,15 @@ function renderCustomization(product) {
 
           <div class="option-list">
 
-            ${sweetnesses.map((sweetness, index) => `<button type="button" class="option-button greek-sweetness-option ${index === 0 ? "active" : ""}" data-greek-sweetness="${escapeHtml(sweetness)}" aria-pressed="${index === 0}">${escapeHtml(sweetness)}</button>`).join("")}
+            ${sweetnesses.map((sweetness) => `<button type="button" class="option-button greek-sweetness-option ${sweetness === defaultSweetness ? "active" : ""}" data-greek-sweetness="${escapeHtml(sweetness)}" aria-pressed="${sweetness === defaultSweetness}">${escapeHtml(formatOptionLabel(sweetness))}</button>`).join("")}
 
           </div>
 
+        </div>
+
+        <div class="customize-field">
+          <label>Price</label>
+          <div class="product-price" data-custom-price="${escapeHtml(product.id)}">${formatMoney(product.prices?.[defaultSize]?.[defaultSweetness])}</div>
         </div>
 
       </div>
@@ -607,6 +650,26 @@ function renderCustomization(product) {
 /* =========================================================
    PRODUCT INTERACTIONS
 ========================================================= */
+
+function updateCustomizationPrice(box) {
+  const productId = box.closest(".product-row")?.dataset.productId;
+  const product = PRODUCTS[productId];
+  const priceElement = box.querySelector("[data-custom-price]");
+  if (!product || !priceElement) return;
+
+  let price = 0;
+  if (product.type === "flavor-size") {
+    const size = box.querySelector(".size-option.active")?.dataset.sizeId;
+    price = product.sizes?.[size];
+  } else if (product.type === "size-sweetness") {
+    const size = box.querySelector(".greek-size-option.active")?.dataset
+      .greekSize;
+    const sweetness = box.querySelector(".greek-sweetness-option.active")
+      ?.dataset.greekSweetness;
+    price = product.prices?.[size]?.[sweetness];
+  }
+  priceElement.textContent = formatMoney(price);
+}
 
 function initializeProductInteractions() {
   $$(".product-add-btn[data-product-id]").forEach((button) => {
@@ -651,7 +714,10 @@ function initializeProductInteractions() {
   $$(".brukina-topping-option").forEach((button) => {
     button.addEventListener("click", () => {
       button.classList.toggle("active");
-      button.setAttribute("aria-pressed", button.classList.contains("active") ? "true" : "false");
+      button.setAttribute(
+        "aria-pressed",
+        button.classList.contains("active") ? "true" : "false",
+      );
     });
   });
 
@@ -674,6 +740,7 @@ function initializeProductInteractions() {
 
       button.classList.add("active");
       button.setAttribute("aria-pressed", "true");
+      updateCustomizationPrice(box);
     });
   });
 
@@ -696,6 +763,7 @@ function initializeProductInteractions() {
 
       button.classList.add("active");
       button.setAttribute("aria-pressed", "true");
+      updateCustomizationPrice(box);
     });
   });
 
@@ -765,6 +833,7 @@ function initializeProductInteractions() {
 
       button.classList.add("active");
       button.setAttribute("aria-pressed", "true");
+      updateCustomizationPrice(box);
     });
   });
 
@@ -787,6 +856,7 @@ function initializeProductInteractions() {
 
       button.classList.add("active");
       button.setAttribute("aria-pressed", "true");
+      updateCustomizationPrice(box);
     });
   });
 
@@ -809,6 +879,7 @@ function initializeProductInteractions() {
 
       button.classList.add("active");
       button.setAttribute("aria-pressed", "true");
+      updateCustomizationPrice(box);
     });
   });
 
@@ -847,7 +918,9 @@ function addCustomizedProduct(productId) {
   --------------------------------------------------------- */
 
   if (product.type === "brukina-custom") {
-    options.toppings = [...box.querySelectorAll(".brukina-topping-option.active")].map((button) => button.dataset.brukinaTopping);
+    options.toppings = [
+      ...box.querySelectorAll(".brukina-topping-option.active"),
+    ].map((button) => button.dataset.brukinaTopping);
     options.includeCoconut = options.toppings.includes("coconut_flakes");
   }
 
@@ -862,7 +935,11 @@ function addCustomizedProduct(productId) {
 
     options.flavorId = selectedFlavor?.dataset.flavorId || "plain";
 
-    options.sizeId = selectedSize?.dataset.sizeId || "500ml";
+    options.sizeId =
+      selectedSize?.dataset.sizeId ||
+      (Object.keys(product.sizes || {}).includes("500ml")
+        ? "500ml"
+        : Object.keys(product.sizes || {})[0]);
   }
 
   /* ---------------------------------------------------------
@@ -894,10 +971,17 @@ function addCustomizedProduct(productId) {
       ".greek-sweetness-option.active",
     );
 
-    options.sizeId = selectedSize?.dataset.greekSize || "500ml";
+    options.sizeId =
+      selectedSize?.dataset.greekSize ||
+      (Object.keys(product.prices || {}).includes("1l")
+        ? "1l"
+        : Object.keys(product.prices || {})[0]);
 
     options.sweetnessId =
-      selectedSweetness?.dataset.greekSweetness || "sweetened";
+      selectedSweetness?.dataset.greekSweetness ||
+      (Object.keys(product.prices?.[options.sizeId] || {}).includes("sweetened")
+        ? "sweetened"
+        : Object.keys(product.prices?.[options.sizeId] || {})[0]);
   }
 
   const unitPrice = getProductUnitPrice(product, options);
@@ -1535,9 +1619,21 @@ async function submitOrder(event) {
 
       metadata: {
         custom_fields: [
-          { display_name: "Customer Name", variable_name: "customer_name", value: customerName },
-          { display_name: "Phone",         variable_name: "customer_phone", value: customerPhone },
-          { display_name: "Order Method",  variable_name: "order_method",  value: orderMethod },
+          {
+            display_name: "Customer Name",
+            variable_name: "customer_name",
+            value: customerName,
+          },
+          {
+            display_name: "Phone",
+            variable_name: "customer_phone",
+            value: customerPhone,
+          },
+          {
+            display_name: "Order Method",
+            variable_name: "order_method",
+            value: orderMethod,
+          },
         ],
       },
 
@@ -1561,6 +1657,13 @@ async function submitOrder(event) {
         }
 
         try {
+          // Show confirmation immediately using the Paystack reference
+          // (will be replaced if server returns an official order number)
+          try {
+            showOrderSuccess(transaction.reference, amountGHS);
+          } catch (e) {
+            // ignore UI errors
+          }
           const orderPayload = {
             customerName,
 
@@ -1571,11 +1674,14 @@ async function submitOrder(event) {
             deliveryAddress:
               orderMethod === "Delivery" ? deliveryAddress || null : null,
 
-            locationLat: orderMethod === "Delivery" ? deliveryLocation.lat : null,
+            locationLat:
+              orderMethod === "Delivery" ? deliveryLocation.lat : null,
 
-            locationLng: orderMethod === "Delivery" ? deliveryLocation.lng : null,
+            locationLng:
+              orderMethod === "Delivery" ? deliveryLocation.lng : null,
 
-            locationLink: orderMethod === "Delivery" ? deliveryLocation.link : null,
+            locationLink:
+              orderMethod === "Delivery" ? deliveryLocation.link : null,
 
             paystackReference: transaction.reference,
 
@@ -1612,7 +1718,8 @@ async function submitOrder(event) {
 
           if (!response.ok) {
             throw new Error(
-              data.message || "Payment succeeded but order could not be saved. Please contact us.",
+              data.message ||
+                "Payment succeeded but order could not be saved. Please contact us.",
             );
           }
 

@@ -673,6 +673,7 @@ function renderProducts(products) {
   }
   productsContainer.innerHTML = products.map((product) => `
     <article class="product-card">
+      <div class="admin-product-image-wrap"><img src="${escapeHtml(product.image || "https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=900&q=85")}" alt="${escapeHtml(product.name)}" onerror="this.src='https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=900&q=85'" /></div>
       <div class="product-card-heading"><span class="product-type">${escapeHtml(product.type.replaceAll("-", " "))}</span><h3>${escapeHtml(product.name)}</h3><p>${escapeHtml(product.category || "Beverage")}</p></div>
       <div class="product-status-row">
         <span class="status-pill status-${escapeHtml(product.status)}">${escapeHtml(product.status.replaceAll("_", " "))}</span>
@@ -751,6 +752,21 @@ function collectConfig(type) {
   return { prices: [...document.querySelectorAll(".sweetness-row")].reduce((prices, row) => { const size = row.querySelector("[data-size]").value.trim(); const sweetened = row.querySelector("[data-sweetened]").value; const unsweetened = row.querySelector("[data-unsweetened]").value; if (size && sweetened !== "" && unsweetened !== "") prices[size] = { sweetened: Number(sweetened), unsweetened: Number(unsweetened) }; return prices; }, {}) };
 }
 
+function setTapPicker(id, value, disabled = false) {
+  const input = document.getElementById(id);
+  input.value = value;
+  document.querySelectorAll(`[data-picker="${id}"] button`).forEach((button) => {
+    button.classList.toggle("selected", button.dataset.value === value);
+    button.disabled = disabled;
+  });
+}
+
+function updateImagePreview(url) {
+  const preview = document.getElementById("productImagePreview");
+  preview.src = url || "https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=900&q=85";
+  preview.onerror = () => { preview.src = "https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=900&q=85"; };
+}
+
 function openProductModal(product = null) {
   productForm.reset();
   editingProductId = product?.id || null;
@@ -759,11 +775,11 @@ function openProductModal(product = null) {
   document.getElementById("productId").disabled = Boolean(product);
   document.getElementById("productName").value = product?.name || "";
   document.getElementById("productCategory").value = product?.category || "Fresh Beverage";
-  document.getElementById("productType").value = product?.type || "brukina-custom";
-  document.getElementById("productType").disabled = Boolean(product);
-  document.getElementById("productStatus").value = product?.status || "available";
+  setTapPicker("productType", product?.type || "brukina-custom", Boolean(product));
+  setTapPicker("productStatus", product?.status || "available");
   document.getElementById("productSortOrder").value = product?.sortOrder || 0;
   document.getElementById("productImageUrl").value = product?.image || "";
+  updateImagePreview(product?.image || "");
   document.getElementById("productDescription").value = product?.description || "";
   renderProductFields(product?.type || "brukina-custom", product || {});
   productFormError.hidden = true;
@@ -782,7 +798,13 @@ document.querySelectorAll(".dashboard-tab").forEach((button) => button.addEventL
 
 addProductBtn.addEventListener("click", openProductModal);
 document.querySelectorAll("[data-close-product-modal]").forEach((button) => button.addEventListener("click", closeProductModal));
-document.getElementById("productType").addEventListener("change", (event) => renderProductFields(event.target.value));
+document.querySelectorAll(".tap-options button").forEach((button) => button.addEventListener("click", () => {
+  const inputId = button.closest(".tap-options").dataset.picker;
+  if (inputId === "productType" && editingProductId) return;
+  setTapPicker(inputId, button.dataset.value);
+  if (inputId === "productType") renderProductFields(button.dataset.value);
+}));
+document.getElementById("productImageUrl").addEventListener("input", (event) => updateImagePreview(event.target.value.trim()));
 productForm.addEventListener("submit", async (event) => {
   event.preventDefault(); productFormError.hidden = true;
   const type = document.getElementById("productType").value;

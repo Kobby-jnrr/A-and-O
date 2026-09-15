@@ -1,4 +1,4 @@
-const API_URL = "https://a-and-o-beverages.onrender.com/api";
+const API_URL = "https://a-and-o-beverages.onrender.com";
 
 const loginScreen = document.getElementById("loginScreen");
 const dashboardScreen = document.getElementById("dashboardScreen");

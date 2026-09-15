@@ -1,12 +1,18 @@
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const axios = require("axios");
 
 const db = require("./database");
 const { login, authenticateToken } = require("./auth");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || "";
+const PAYSTACK_PUBLIC_KEY = process.env.PAYSTACK_PUBLIC_KEY || "";
 
 // ============================================================
 // PRODUCTS
@@ -159,7 +165,7 @@ app.post("/api/orders", async (req, res) => {
       locationLat,
       locationLng,
       locationLink,
-      momoReference,
+      paystackReference,
       items,
     } = req.body;
 
@@ -167,10 +173,10 @@ app.post("/api/orders", async (req, res) => {
     // BASIC VALIDATION
     // --------------------------------------------------------
 
-    if (!customerName || !customerPhone || !orderMethod || !momoReference) {
+    if (!customerName || !customerPhone || !orderMethod || !paystackReference) {
       return res.status(400).json({
         message:
-          "Please provide your name, phone number, order method, and Mobile Money reference.",
+          "Please provide your name, phone number, order method, and a valid payment reference.",
       });
     }
 
@@ -194,7 +200,7 @@ app.post("/api/orders", async (req, res) => {
 
     const cleanCustomerName = String(customerName).trim();
     const cleanCustomerPhone = String(customerPhone).trim();
-    const cleanMomoReference = String(momoReference).trim();
+    const cleanPaystackRef = String(paystackReference).trim();
 
     if (!cleanCustomerName || !cleanCustomerPhone) {
       return res.status(400).json({
@@ -202,9 +208,43 @@ app.post("/api/orders", async (req, res) => {
       });
     }
 
-    if (!cleanMomoReference) {
+    if (!cleanPaystackRef) {
       return res.status(400).json({
-        message: "Please provide your Mobile Money payment reference.",
+        message: "Please provide a valid payment reference.",
+      });
+    }
+
+    // --------------------------------------------------------
+    // VERIFY PAYSTACK PAYMENT
+    // --------------------------------------------------------
+
+    let verifiedAmount = 0;
+
+    try {
+      const verifyRes = await axios.get(
+        `https://api.paystack.co/transaction/verify/${encodeURIComponent(cleanPaystackRef)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+          },
+        },
+      );
+
+      const txn = verifyRes.data?.data;
+
+      if (!txn || txn.status !== "success") {
+        return res.status(400).json({
+          message: "Payment could not be verified. Please try again.",
+        });
+      }
+
+      // Paystack returns amount in kobo (pesewas for GHS)
+      verifiedAmount = txn.amount / 100;
+    } catch (verifyError) {
+      console.error("Paystack verify error:", verifyError?.response?.data || verifyError.message);
+
+      return res.status(400).json({
+        message: "We could not verify your payment. Please contact us if payment was deducted.",
       });
     }
 
@@ -454,11 +494,11 @@ app.post("/api/orders", async (req, res) => {
           $7,
           $8,
           $9,
-          'MoMo',
-          '059 990 7434',
-          'A and O Beverages Limited',
+          'Paystack',
+          NULL,
+          NULL,
           $10,
-          'Pending',
+          'Verified',
           'Pending'
         )
         RETURNING id
@@ -473,7 +513,7 @@ app.post("/api/orders", async (req, res) => {
           locationLng ?? null,
           locationLink || null,
           calculatedTotal,
-          cleanMomoReference,
+          cleanPaystackRef,
         ],
       );
 
@@ -518,7 +558,7 @@ app.post("/api/orders", async (req, res) => {
         orderId,
         orderNumber,
         totalAmount: calculatedTotal,
-        paymentStatus: "Pending",
+        paymentStatus: "Verified",
         orderStatus: "Pending",
         trackingMessage:
           "Please keep your order number so you can check your order status later.",
@@ -619,7 +659,7 @@ app.get("/api/orders/track/:orderNumber", async (req, res) => {
         "This order has been cancelled. Please contact us if you need assistance.";
     } else if (order.payment_status === "Pending") {
       statusMessage =
-        "Your order has been received. We're checking your Mobile Money payment.";
+        "Your order has been received and is awaiting payment verification.";
     }
 
     res.json({
@@ -822,6 +862,65 @@ app.patch(
     }
   },
 );
+
+// ============================================================
+// PAYSTACK — INITIALIZE TRANSACTION
+// ============================================================
+
+app.post("/api/paystack/initialize", async (req, res) => {
+  try {
+    const { email, amountGHS, customerName, customerPhone } = req.body;
+
+    if (!email || !amountGHS || amountGHS <= 0) {
+      return res.status(400).json({
+        message: "A valid email and amount are required to start payment.",
+      });
+    }
+
+    // Paystack expects amount in the lowest currency unit (pesewas for GHS)
+    const amountKobo = Math.round(Number(amountGHS) * 100);
+
+    const paystackRes = await axios.post(
+      "https://api.paystack.co/transaction/initialize",
+      {
+        email,
+        amount: amountKobo,
+        currency: "GHS",
+        metadata: {
+          customer_name: customerName,
+          customer_phone: customerPhone,
+        },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    const { reference, authorization_url } = paystackRes.data.data;
+
+    res.json({
+      success: true,
+      reference,
+      authorization_url,
+      amountKobo,
+      email,
+      // Return the public key so the frontend can open the inline popup
+      publicKey: PAYSTACK_PUBLIC_KEY,
+    });
+  } catch (error) {
+    console.error(
+      "Paystack initialize error:",
+      error?.response?.data || error.message,
+    );
+
+    res.status(500).json({
+      message: "Could not start payment. Please try again.",
+    });
+  }
+});
 
 // ============================================================
 // START SERVER

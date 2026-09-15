@@ -1251,7 +1251,7 @@ function updateCartBadge() {
 }
 
 /* =========================================================
-   MOMO AMOUNT
+   PAYSTACK AMOUNT DISPLAY
 ========================================================= */
 
 function updateMomoAmount() {
@@ -1544,9 +1544,8 @@ function validateOrderForm() {
 
   const deliveryAddress = $("#deliveryAddress");
 
-  const momoReference = $("#momoReference");
-
-  [customerName, customerPhone, momoReference].forEach((field) => {
+  // Paystack handles payment — only validate customer info fields
+  [customerName, customerPhone].forEach((field) => {
     if (!field) {
       return;
     }
@@ -1586,7 +1585,7 @@ function validateOrderForm() {
 }
 
 /* =========================================================
-   ORDER SUBMISSION
+   ORDER SUBMISSION — PAYSTACK
 ========================================================= */
 
 async function submitOrder(event) {
@@ -1612,100 +1611,184 @@ async function submitOrder(event) {
 
   const deliveryAddress = $("#deliveryAddress")?.value.trim() || "";
 
-  const momoReference = $("#momoReference").value.trim();
-
-  const payload = {
-    customerName,
-
-    customerPhone,
-
-    orderMethod,
-
-    deliveryAddress:
-      orderMethod === "Delivery" ? deliveryAddress || null : null,
-
-    locationLat: orderMethod === "Delivery" ? deliveryLocation.lat : null,
-
-    locationLng: orderMethod === "Delivery" ? deliveryLocation.lng : null,
-
-    locationLink: orderMethod === "Delivery" ? deliveryLocation.link : null,
-
-    momoReference,
-
-    items: cart.map((item) => ({
-      productId: item.productId,
-
-      quantity: item.quantity,
-
-      includeCoconut: item.options?.includeCoconut || false,
-
-      flavorId: item.options?.flavorId || null,
-
-      sizeId: item.options?.sizeId || null,
-
-      fruits: item.options?.fruits || [],
-
-      toppings: item.options?.toppings || [],
-
-      syrupId: item.options?.syrupId || "none",
-
-      sweetnessId: item.options?.sweetnessId || null,
-    })),
-  };
+  const amountGHS = getCartTotal();
 
   if (submitButton) {
     submitButton.disabled = true;
 
-    submitButton.textContent = "Submitting your order...";
+    submitButton.textContent = "Preparing payment...";
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/orders`, {
+    // -------------------------------------------------------
+    // Step 1 — Ask the server to initialise a Paystack charge
+    // -------------------------------------------------------
+    const initResponse = await fetch(`${API_BASE_URL}/paystack/initialize`, {
       method: "POST",
 
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
 
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        email: `${customerPhone.replace(/\s/g, "")}@aoandbeverages.com`,
+        amountGHS,
+        customerName,
+        customerPhone,
+      }),
     });
 
-    const data = await response.json().catch(() => ({}));
+    const initData = await initResponse.json().catch(() => ({}));
 
-    if (!response.ok) {
+    if (!initResponse.ok) {
       throw new Error(
-        data.message || "Something went wrong while submitting your order.",
+        initData.message || "Could not start the payment. Please try again.",
       );
     }
 
-    if (data.orderNumber) {
-      localStorage.setItem("aoLatestOrderNumber", data.orderNumber);
-    }
+    const { reference } = initData;
 
-    cart = [];
+    // -------------------------------------------------------
+    // Step 2 — Open Paystack inline popup
+    // -------------------------------------------------------
+    const handler = PaystackPop.setup({
+      key: initData.publicKey,
 
-    renderCart();
+      email: initData.email,
 
-    updateCartBadge();
+      amount: initData.amountKobo,
 
-    updateMomoAmount();
+      currency: "GHS",
 
-    resetOrderForm();
+      ref: reference,
 
-    closeDrawer();
+      metadata: {
+        custom_fields: [
+          { display_name: "Customer Name", variable_name: "customer_name", value: customerName },
+          { display_name: "Phone",         variable_name: "customer_phone", value: customerPhone },
+          { display_name: "Order Method",  variable_name: "order_method",  value: orderMethod },
+        ],
+      },
 
-    showOrderSuccess(data.orderNumber, data.totalAmount);
+      onClose() {
+        // User dismissed the popup without paying
+        if (submitButton) {
+          submitButton.disabled = false;
+
+          submitButton.textContent = "Pay & Place Order";
+        }
+
+        showSmallNotice("Payment was not completed.");
+      },
+
+      async onSuccess(transaction) {
+        // -------------------------------------------------------
+        // Step 3 — Payment succeeded; place the order on our server
+        // -------------------------------------------------------
+        if (submitButton) {
+          submitButton.textContent = "Placing your order...";
+        }
+
+        try {
+          const orderPayload = {
+            customerName,
+
+            customerPhone,
+
+            orderMethod,
+
+            deliveryAddress:
+              orderMethod === "Delivery" ? deliveryAddress || null : null,
+
+            locationLat: orderMethod === "Delivery" ? deliveryLocation.lat : null,
+
+            locationLng: orderMethod === "Delivery" ? deliveryLocation.lng : null,
+
+            locationLink: orderMethod === "Delivery" ? deliveryLocation.link : null,
+
+            paystackReference: transaction.reference,
+
+            items: cart.map((item) => ({
+              productId: item.productId,
+
+              quantity: item.quantity,
+
+              includeCoconut: item.options?.includeCoconut || false,
+
+              flavorId: item.options?.flavorId || null,
+
+              sizeId: item.options?.sizeId || null,
+
+              fruits: item.options?.fruits || [],
+
+              toppings: item.options?.toppings || [],
+
+              syrupId: item.options?.syrupId || "none",
+
+              sweetnessId: item.options?.sweetnessId || null,
+            })),
+          };
+
+          const response = await fetch(`${API_BASE_URL}/orders`, {
+            method: "POST",
+
+            headers: { "Content-Type": "application/json" },
+
+            body: JSON.stringify(orderPayload),
+          });
+
+          const data = await response.json().catch(() => ({}));
+
+          if (!response.ok) {
+            throw new Error(
+              data.message || "Payment succeeded but order could not be saved. Please contact us.",
+            );
+          }
+
+          if (data.orderNumber) {
+            localStorage.setItem("aoLatestOrderNumber", data.orderNumber);
+          }
+
+          cart = [];
+
+          renderCart();
+
+          updateCartBadge();
+
+          updateMomoAmount();
+
+          resetOrderForm();
+
+          closeDrawer();
+
+          showOrderSuccess(data.orderNumber, data.totalAmount);
+        } catch (orderError) {
+          console.error("Order save error after payment:", orderError);
+
+          showSmallNotice(
+            orderError.message ||
+              "Your payment went through but we couldn't record your order. Please contact us immediately.",
+          );
+        } finally {
+          if (submitButton) {
+            submitButton.disabled = false;
+
+            submitButton.textContent = "Pay & Place Order";
+          }
+        }
+      },
+    });
+
+    handler.openIframe();
   } catch (error) {
-    console.error("Order submission error:", error);
+    console.error("Paystack init error:", error);
 
     showSmallNotice(
-      error.message || "We couldn't submit your order. Please try again.",
+      error.message || "We couldn't start the payment. Please try again.",
     );
-  } finally {
+
     if (submitButton) {
       submitButton.disabled = false;
 
-      submitButton.textContent = "I've paid — Submit order";
+      submitButton.textContent = "Pay & Place Order";
     }
   }
 }
@@ -2039,7 +2122,7 @@ function getTrackingStatusInfo(order) {
     return {
       label: "Payment not verified",
       message:
-        "We could not verify the Mobile Money payment for this order. If you have already made the payment, please reach out to us immediately so we can look into the issue and work with you to resolve it.",
+        "We could not verify the payment for this order. If you believe a payment was made, please reach out to us immediately so we can look into the issue and work with you to resolve it.",
       tone: "warning",
     };
   }
@@ -2893,7 +2976,7 @@ function initialize() {
 
   updateCartBadge();
 
-  updateMomoAmount();
+  updateMomoAmount(); // keeps the Paystack amount display in sync
 
   updateAddressVisibility();
 

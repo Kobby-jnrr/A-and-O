@@ -22,6 +22,9 @@
     />
 
     <link rel="stylesheet" href="styles.css" />
+
+    <!-- Paystack Inline JS -->
+    <script src="https://js.paystack.co/v1/inline.js"></script>
   </head>
 
   <body>
@@ -416,8 +419,8 @@
             </div>
 
             <p>
-              Choose what you want, customize it, pay through Mobile Money, and
-              submit your order.
+              Choose what you want, customize it, pay securely with Paystack,
+              and your order is confirmed instantly.
             </p>
           </div>
 
@@ -447,7 +450,7 @@
 
               <h3>Pay</h3>
 
-              <p>Pay the displayed total to our Mobile Money number.</p>
+              <p>Pay securely via Paystack — card, mobile money &amp; more.</p>
             </div>
 
             <div class="step">
@@ -456,8 +459,8 @@
               <h3>Track</h3>
 
               <p>
-                Submit your payment reference and use your order number to
-                follow your order.
+                Your order is confirmed the moment payment succeeds. Use your
+                order number to follow its progress.
               </p>
             </div>
           </div>
@@ -704,43 +707,20 @@
               <div class="payment-note-icon" aria-hidden="true">💳</div>
 
               <div>
-                <strong> Pay with Mobile Money </strong>
+                <strong> Pay with Paystack </strong>
 
                 <p>
-                  Pay
+                  Total:
                   <strong>
                     <span id="momoAmount"> GHS 0.00 </span>
                   </strong>
-                  to:
                 </p>
 
                 <p>
-                  <strong> 059 990 7434 </strong>
-
-                  <br />
-
-                  A and O Beverages Limited
-                </p>
-
-                <p>
-                  After payment, enter your MoMo transaction/reference ID below.
+                  Click the button below to pay securely via Paystack.
+                  Card, Mobile Money and more are accepted.
                 </p>
               </div>
-            </div>
-
-            <div class="field">
-              <label for="momoReference">
-                MoMo Transaction / Reference ID
-              </label>
-
-              <input
-                type="text"
-                id="momoReference"
-                name="momoReference"
-                placeholder="Enter your transaction ID"
-                autocomplete="off"
-                required
-              />
             </div>
           </div>
 
@@ -750,7 +730,7 @@
 
           <div class="order-btn-row">
             <button type="submit" class="order-btn" id="submitOrderBtn">
-              I've paid — Submit order
+              Pay &amp; Place Order
             </button>
           </div>
         </form>
@@ -789,8 +769,8 @@
         <h2 id="aoSuccessTitle">Your order is on its way! 🎉</h2>
 
         <p class="ao-success-text">
-          Thank you for ordering from A and O Beverages, Bakes and More. We've
-          received your order and will verify your payment.
+          Thank you for ordering from A and O Beverages, Bakes and More. Your
+          payment was successful and your order has been confirmed.
         </p>
 
         <div class="ao-order-number-box">

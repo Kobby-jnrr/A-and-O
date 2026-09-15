@@ -244,7 +244,7 @@ app.post("/api/orders", async (req, res) => {
         unitPrice = product.price;
 
         const coconutFlakes =
-          item.coconutFlakes === true || item.coconutFlakes === "true";
+          item.includeCoconut === true || item.includeCoconut === "true";
 
         description = coconutFlakes ? "With Coconut Flakes" : "Standard";
       }
@@ -253,8 +253,8 @@ app.post("/api/orders", async (req, res) => {
       // FRESH YOGHURT DRINK
       // ------------------------------------------------------
       else if (productId === "B") {
-        const size = String(item.size || "").trim();
-        const flavor = String(item.flavor || "")
+        const size = String(item.sizeId || "").trim();
+        const flavor = String(item.flavorId || "")
           .trim()
           .toLowerCase();
 
@@ -305,7 +305,7 @@ app.post("/api/orders", async (req, res) => {
 
         const toppings = Array.isArray(item.toppings) ? item.toppings : [];
 
-        const syrup = item.syrup || "none";
+        const syrup = item.syrupId || "none";
 
         if (fruits.length > 3) {
           return res.status(400).json({
@@ -373,8 +373,8 @@ app.post("/api/orders", async (req, res) => {
       // GREEK YOGHURT
       // ------------------------------------------------------
       else if (productId === "D") {
-        const size = String(item.size || "").trim();
-        const sweetness = String(item.sweetness || "")
+        const size = String(item.sizeId || "").trim();
+        const sweetness = String(item.sweetnessId || "")
           .trim()
           .toLowerCase();
 

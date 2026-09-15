@@ -74,7 +74,8 @@ function getProductUnitPrice(product, options = {}) {
   }
 
   if (product.type === "brukina-custom") {
-    return product.price;
+    const groundnut = !!options.groundnut;
+    return Number(product.price) + (groundnut ? 2 : 0);
   }
 
   if (product.type === "flavor-size") {
@@ -105,9 +106,10 @@ function getCartItemDescription(product, options = {}) {
     const toppingNames = (options.toppings || [])
       .map((id) => product.toppings?.[id])
       .filter(Boolean);
-    return toppingNames.length
-      ? `Toppings: ${toppingNames.join(", ")}`
-      : "Standard";
+    const parts = [];
+    if (toppingNames.length) parts.push(`Toppings: ${toppingNames.join(", ")}`);
+    if (options.groundnut) parts.push("Groundnut");
+    return parts.length ? parts.join("; ") : "Standard";
   }
 
   if (product.type === "flavor-size") {
@@ -355,6 +357,18 @@ function renderCustomization(product) {
 
           <div class="product-price">
             ${formatMoney(product.price)}
+          </div>
+
+        </div>
+
+        <div class="customize-field">
+
+          <label>
+            Groundnut (+GHS 2.00)
+          </label>
+
+          <div class="option-list">
+            <button type="button" class="option-button brukina-groundnut-option" aria-pressed="false">Add Groundnut</button>
           </div>
 
         </div>
@@ -668,6 +682,12 @@ function updateCustomizationPrice(box) {
     const sweetness = box.querySelector(".greek-sweetness-option.active")
       ?.dataset.greekSweetness;
     price = product.prices?.[size]?.[sweetness];
+  } else if (product.type === "brukina-custom") {
+    // base price + groundnut option
+    const groundnutSelected = !!box.querySelector(
+      ".brukina-groundnut-option.active",
+    );
+    price = Number(product.price) + (groundnutSelected ? 2 : 0);
   }
   priceElement.textContent = formatMoney(price);
 }
@@ -719,6 +739,21 @@ function initializeProductInteractions() {
         "aria-pressed",
         button.classList.contains("active") ? "true" : "false",
       );
+      // update price when toppings change
+      const box = button.closest(".customize-box");
+      if (box) updateCustomizationPrice(box);
+    });
+  });
+
+  $$(".brukina-groundnut-option").forEach((button) => {
+    button.addEventListener("click", () => {
+      button.classList.toggle("active");
+      button.setAttribute(
+        "aria-pressed",
+        button.classList.contains("active") ? "true" : "false",
+      );
+      const box = button.closest(".customize-box");
+      if (box) updateCustomizationPrice(box);
     });
   });
 
@@ -923,6 +958,7 @@ function addCustomizedProduct(productId) {
       ...box.querySelectorAll(".brukina-topping-option.active"),
     ].map((button) => button.dataset.brukinaTopping);
     options.includeCoconut = options.toppings.includes("coconut_flakes");
+    options.groundnut = !!box.querySelector(".brukina-groundnut-option.active");
   }
 
   /* ---------------------------------------------------------

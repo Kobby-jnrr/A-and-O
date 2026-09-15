@@ -10,6 +10,10 @@ const logoutBtn = document.getElementById("logoutBtn");
 const refreshBtn = document.getElementById("refreshBtn");
 
 const ordersContainer = document.getElementById("ordersContainer");
+const activeOrdersContainer = document.getElementById("activeOrdersContainer");
+const completedOrdersContainer = document.getElementById(
+  "completedOrdersContainer",
+);
 const emptyOrders = document.getElementById("emptyOrders");
 
 const totalOrders = document.getElementById("totalOrders");
@@ -147,7 +151,9 @@ async function loadOrders() {
 function renderOrders(orders) {
   updateSummary(orders);
 
-  ordersContainer.innerHTML = "";
+  // Clear both lists
+  activeOrdersContainer.innerHTML = "";
+  completedOrdersContainer.innerHTML = "";
 
   if (!orders.length) {
     emptyOrders.hidden = false;
@@ -156,9 +162,26 @@ function renderOrders(orders) {
 
   emptyOrders.hidden = true;
 
-  orders.forEach((order) => {
-    ordersContainer.appendChild(createOrderCard(order));
-  });
+  // Active orders: not Completed or Cancelled — FIFO (oldest first)
+  const active = orders
+    .filter((o) => !["Completed", "Cancelled"].includes(o.order_status))
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+  // Completed orders: only Completed — LIFO (newest first)
+  const completed = orders
+    .filter((o) => o.order_status === "Completed")
+    .sort(
+      (a, b) =>
+        new Date(b.updated_at || b.created_at) -
+        new Date(a.updated_at || a.created_at),
+    );
+
+  active.forEach((order) =>
+    activeOrdersContainer.appendChild(createOrderCard(order)),
+  );
+  completed.forEach((order) =>
+    completedOrdersContainer.appendChild(createOrderCard(order)),
+  );
 }
 
 /* =========================
@@ -696,7 +719,8 @@ function renderProducts(products) {
           : product.description
         : "";
 
-      const fallbackImg = "https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=900&q=85";
+      const fallbackImg =
+        "https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=900&q=85";
       return `
       <article class="product-card">
         <!-- Image -->

@@ -193,7 +193,29 @@
             </button>
           </div>
 
-          <div id="ordersContainer" class="orders-container"></div>
+          <div class="orders-split">
+            <section class="orders-subsection">
+              <div class="section-heading small">
+                <div>
+                  <h3>Active Orders</h3>
+                  <p>Oldest first (FIFO) — orders being processed.</p>
+                </div>
+              </div>
+
+              <div id="activeOrdersContainer" class="orders-container"></div>
+            </section>
+
+            <section class="orders-subsection">
+              <div class="section-heading small">
+                <div>
+                  <h3>Completed Orders</h3>
+                  <p>Newest first (LIFO) — recently completed orders.</p>
+                </div>
+              </div>
+
+              <div id="completedOrdersContainer" class="orders-container"></div>
+            </section>
+          </div>
 
           <div id="emptyOrders" class="empty-orders" hidden>
             <div class="empty-icon">🧾</div>

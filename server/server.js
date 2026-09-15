@@ -307,11 +307,9 @@ app.post("/api/orders/init", async (req, res) => {
     } = req.body;
 
     if (!customerName || !customerPhone || !orderMethod) {
-      return res
-        .status(400)
-        .json({
-          message: "Please provide your name, phone number, and order method.",
-        });
+      return res.status(400).json({
+        message: "Please provide your name, phone number, and order method.",
+      });
     }
 
     if (!Array.isArray(items) || items.length === 0) {
@@ -373,24 +371,40 @@ app.post("/api/orders/init", async (req, res) => {
       let description = "";
 
       if (product.type === "brukina-custom") {
-        unitPrice = product.price;
+        const toppings = Array.isArray(item.toppings) ? item.toppings : [];
+        const allowedToppings = product.toppings || {
+          coconut_flakes: "Coconut Flakes",
+        };
+        if (toppings.some((topping) => !allowedToppings[topping])) {
+          return res
+            .status(400)
+            .json({ message: "Invalid Brukina topping selected." });
+        }
+
+        const groundnutSelected = !!item.groundnut;
+
+        unitPrice = Number(product.price) + (groundnutSelected ? 2 : 0);
+
+        description = [];
+        if (toppings.length)
+          description.push(
+            `Toppings: ${toppings.map((t) => allowedToppings[t]).join(", ")}`,
+          );
+        if (groundnutSelected) description.push("Groundnut");
+        description = description.join("; ") || "Standard";
       } else if (product.type === "flavor-size") {
         const size = String(item.sizeId || "").trim();
         const flavor = String(item.flavorId || "")
           .trim()
           .toLowerCase();
         if (!product.sizes?.[size])
-          return res
-            .status(400)
-            .json({
-              message: "Please select a valid size for Fresh Yoghurt Drink.",
-            });
+          return res.status(400).json({
+            message: "Please select a valid size for Fresh Yoghurt Drink.",
+          });
         if (!product.flavors?.[flavor])
-          return res
-            .status(400)
-            .json({
-              message: "Please select a valid flavor for Fresh Yoghurt Drink.",
-            });
+          return res.status(400).json({
+            message: "Please select a valid flavor for Fresh Yoghurt Drink.",
+          });
         unitPrice = product.sizes[size];
         description = `${flavor.charAt(0).toUpperCase() + flavor.slice(1)} - ${size}`;
       } else if (product.type === "parfait-custom") {
@@ -405,12 +419,10 @@ app.post("/api/orders/init", async (req, res) => {
             .status(400)
             .json({ message: "Please select a valid size for Greek Yoghurt." });
         if (!product.prices[size]?.[sweetness])
-          return res
-            .status(400)
-            .json({
-              message:
-                "Please select whether the Greek Yoghurt is sweetened or unsweetened.",
-            });
+          return res.status(400).json({
+            message:
+              "Please select whether the Greek Yoghurt is sweetened or unsweetened.",
+          });
         unitPrice = product.prices[size][sweetness];
         description = `${size} - ${sweetness.charAt(0).toUpperCase() + sweetness.slice(1)}`;
       } else {
@@ -470,14 +482,12 @@ app.post("/api/orders/init", async (req, res) => {
 
       await client.query("COMMIT");
 
-      return res
-        .status(201)
-        .json({
-          success: true,
-          orderNumber,
-          orderId,
-          totalAmount: calculatedTotal,
-        });
+      return res.status(201).json({
+        success: true,
+        orderNumber,
+        orderId,
+        totalAmount: calculatedTotal,
+      });
     } catch (err) {
       await client.query("ROLLBACK");
       throw err;
@@ -650,7 +660,6 @@ app.post("/api/orders", async (req, res) => {
       // ------------------------------------------------------
 
       if (product.type === "brukina-custom") {
-        unitPrice = product.price;
         const toppings = Array.isArray(item.toppings) ? item.toppings : [];
         const allowedToppings = product.toppings || {
           coconut_flakes: "Coconut Flakes",
@@ -660,9 +669,18 @@ app.post("/api/orders", async (req, res) => {
             .status(400)
             .json({ message: "Invalid Brukina topping selected." });
         }
-        description = toppings.length
-          ? `Toppings: ${toppings.map((topping) => allowedToppings[topping]).join(", ")}`
-          : "Standard";
+
+        const groundnutSelected = !!item.groundnut;
+
+        unitPrice = Number(product.price) + (groundnutSelected ? 2 : 0);
+
+        description = [];
+        if (toppings.length)
+          description.push(
+            `Toppings: ${toppings.map((t) => allowedToppings[t]).join(", ")}`,
+          );
+        if (groundnutSelected) description.push("Groundnut");
+        description = description.join("; ") || "Standard";
       }
 
       // ------------------------------------------------------
@@ -829,36 +847,30 @@ app.post("/api/orders", async (req, res) => {
 
       const txn = verifyRes.data?.data;
       if (!txn || txn.status !== "success") {
-        return res
-          .status(400)
-          .json({
-            message: "Payment could not be verified. Please try again.",
-          });
+        return res.status(400).json({
+          message: "Payment could not be verified. Please try again.",
+        });
       }
 
       verifiedAmount = Number(txn.amount) / 100;
 
       if (Math.abs(verifiedAmount - expectedTotal) > 0.01) {
-        return res
-          .status(400)
-          .json({
-            message:
-              "The amount paid does not match the order total including fees.",
-            expected: expectedTotal,
-            paid: verifiedAmount,
-          });
+        return res.status(400).json({
+          message:
+            "The amount paid does not match the order total including fees.",
+          expected: expectedTotal,
+          paid: verifiedAmount,
+        });
       }
     } catch (verifyError) {
       console.error(
         "Paystack verify error:",
         verifyError?.response?.data || verifyError.message,
       );
-      return res
-        .status(400)
-        .json({
-          message:
-            "We could not verify your payment. Please contact us if payment was deducted.",
-        });
+      return res.status(400).json({
+        message:
+          "We could not verify your payment. Please contact us if payment was deducted.",
+      });
     }
 
     // --------------------------------------------------------
@@ -885,11 +897,9 @@ app.post("/api/orders", async (req, res) => {
         const storedTotal = Number(existing.rows[0].total_amount);
         if (Math.abs(storedTotal - calculatedTotal) > 0.01) {
           await client.query("ROLLBACK");
-          return res
-            .status(400)
-            .json({
-              message: "Order items do not match provisional order total.",
-            });
+          return res.status(400).json({
+            message: "Order items do not match provisional order total.",
+          });
         }
 
         const updateRes = await client.query(
@@ -899,14 +909,12 @@ app.post("/api/orders", async (req, res) => {
 
         await client.query("COMMIT");
 
-        return res
-          .status(200)
-          .json({
-            success: true,
-            message: "Order finalized.",
-            orderNumber: providedOrderNumber,
-            orderId: updateRes.rows[0].id,
-          });
+        return res.status(200).json({
+          success: true,
+          message: "Order finalized.",
+          orderNumber: providedOrderNumber,
+          orderId: updateRes.rows[0].id,
+        });
       }
 
       // No provisional order provided — insert new order record
@@ -946,19 +954,17 @@ app.post("/api/orders", async (req, res) => {
 
       await client.query("COMMIT");
 
-      res
-        .status(201)
-        .json({
-          success: true,
-          message: "Your order has been received successfully!",
-          orderId,
-          orderNumber,
-          totalAmount: calculatedTotal,
-          paymentStatus: "Verified",
-          orderStatus: "Pending",
-          trackingMessage:
-            "Please keep your order number so you can check your order status later.",
-        });
+      res.status(201).json({
+        success: true,
+        message: "Your order has been received successfully!",
+        orderId,
+        orderNumber,
+        totalAmount: calculatedTotal,
+        paymentStatus: "Verified",
+        orderStatus: "Pending",
+        trackingMessage:
+          "Please keep your order number so you can check your order status later.",
+      });
     } catch (transactionError) {
       await client.query("ROLLBACK");
       throw transactionError;

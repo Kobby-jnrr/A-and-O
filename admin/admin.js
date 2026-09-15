@@ -16,6 +16,22 @@ const totalOrders = document.getElementById("totalOrders");
 const pendingPayments = document.getElementById("pendingPayments");
 const verifiedPayments = document.getElementById("verifiedPayments");
 const activeOrders = document.getElementById("activeOrders");
+const ordersSection = document.getElementById("ordersSection");
+const ordersIntro = document.getElementById("ordersIntro");
+const ordersSummary = document.getElementById("ordersSummary");
+const productsSection = document.getElementById("productsSection");
+const productsContainer = document.getElementById("productsContainer");
+const addProductBtn = document.getElementById("addProductBtn");
+const productModal = document.getElementById("productModal");
+const productForm = document.getElementById("productForm");
+const productFormError = document.getElementById("productFormError");
+
+const PRODUCT_CONFIG_TEMPLATES = {
+  "brukina-custom": { price: 20 },
+  "flavor-size": { sizes: { "500ml": 25, "300ml": 15 }, flavors: { plain: "Plain", strawberry: "Strawberry" } },
+  "parfait-custom": { price: 40, fruits: { mangoes: "Mangoes" }, toppings: { granola: "Granola" }, syrups: { none: "No Syrup", honey: "Honey" } },
+  "size-sweetness": { prices: { "500ml": { sweetened: 50, unsweetened: 45 } } },
+};
 
 /* =========================
    LOGIN
@@ -69,6 +85,7 @@ function showDashboard() {
   dashboardScreen.hidden = false;
 
   loadOrders();
+  loadProducts();
 }
 
 /* =========================
@@ -632,6 +649,94 @@ async function saveOrderChanges({
     button.disabled = false;
   }
 }
+
+/* =========================
+   PRODUCTS
+========================= */
+
+async function loadProducts() {
+  const token = localStorage.getItem("aoAdminToken");
+  if (!token) return;
+  try {
+    const response = await fetch(`${API_URL}/api/admin/products`, { headers: { Authorization: `Bearer ${token}` } });
+    if (response.status === 401) return logout();
+    if (!response.ok) throw new Error("Could not load products.");
+    renderProducts(await response.json());
+  } catch (error) {
+    console.error("Could not load products:", error);
+    productsContainer.innerHTML = `<div class="empty-orders"><h3>Could not load products</h3><p>Please check that the database setup has been run.</p></div>`;
+  }
+}
+
+function renderProducts(products) {
+  if (!products.length) {
+    productsContainer.innerHTML = `<div class="empty-orders"><h3>No products yet</h3><p>Add your first product to make it available to customers.</p></div>`;
+    return;
+  }
+  productsContainer.innerHTML = products.map((product) => `
+    <article class="product-card">
+      <div><span class="product-type">${escapeHtml(product.type)}</span><h3>${escapeHtml(product.name)}</h3><p>${escapeHtml(product.category || "Beverage")}</p></div>
+      <label>Status
+        <select class="product-status-select" data-id="${escapeHtml(product.id)}">
+          <option value="available" ${product.status === "available" ? "selected" : ""}>Available</option>
+          <option value="out_of_stock" ${product.status === "out_of_stock" ? "selected" : ""}>Out of stock</option>
+          <option value="unavailable" ${product.status === "unavailable" ? "selected" : ""}>Temporarily unavailable</option>
+        </select>
+      </label>
+      <button type="button" class="delete-product-btn" data-id="${escapeHtml(product.id)}" data-name="${escapeHtml(product.name)}">Delete</button>
+    </article>`).join("");
+
+  document.querySelectorAll(".product-status-select").forEach((select) => select.addEventListener("change", () => updateProduct(select.dataset.id, { status: select.value })));
+  document.querySelectorAll(".delete-product-btn").forEach((button) => button.addEventListener("click", () => deleteProduct(button.dataset.id, button.dataset.name)));
+}
+
+async function updateProduct(id, changes) {
+  const response = await fetch(`${API_URL}/api/admin/products/${encodeURIComponent(id)}`, {
+    method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("aoAdminToken")}` }, body: JSON.stringify(changes),
+  });
+  if (!response.ok) { showSmallError("Could not update product status."); await loadProducts(); }
+}
+
+async function deleteProduct(id, name) {
+  if (!window.confirm(`Delete ${name}? This cannot be undone.`)) return;
+  const response = await fetch(`${API_URL}/api/admin/products/${encodeURIComponent(id)}`, { method: "DELETE", headers: { Authorization: `Bearer ${localStorage.getItem("aoAdminToken")}` } });
+  if (!response.ok) return showSmallError("Could not delete product.");
+  loadProducts();
+}
+
+function openProductModal() {
+  productForm.reset();
+  document.getElementById("productCategory").value = "Fresh Beverage";
+  document.getElementById("productSortOrder").value = "0";
+  document.getElementById("productConfig").value = JSON.stringify(PRODUCT_CONFIG_TEMPLATES["brukina-custom"], null, 2);
+  productFormError.hidden = true;
+  productModal.hidden = false;
+}
+
+function closeProductModal() { productModal.hidden = true; }
+function showSmallError(message) { window.alert(message); }
+
+document.querySelectorAll(".dashboard-tab").forEach((button) => button.addEventListener("click", () => {
+  const productsActive = button.dataset.tab === "products";
+  document.querySelectorAll(".dashboard-tab").forEach((tab) => tab.classList.toggle("active", tab === button));
+  ordersSection.hidden = productsActive; ordersIntro.hidden = productsActive; ordersSummary.hidden = productsActive; productsSection.hidden = !productsActive;
+  if (productsActive) loadProducts();
+}));
+
+addProductBtn.addEventListener("click", openProductModal);
+document.querySelectorAll("[data-close-product-modal]").forEach((button) => button.addEventListener("click", closeProductModal));
+document.getElementById("productType").addEventListener("change", (event) => { document.getElementById("productConfig").value = JSON.stringify(PRODUCT_CONFIG_TEMPLATES[event.target.value], null, 2); });
+productForm.addEventListener("submit", async (event) => {
+  event.preventDefault(); productFormError.hidden = true;
+  let config;
+  try { config = JSON.parse(document.getElementById("productConfig").value); } catch { productFormError.textContent = "Configuration must be valid JSON."; productFormError.hidden = false; return; }
+  const payload = { id: document.getElementById("productId").value.trim(), name: document.getElementById("productName").value.trim(), category: document.getElementById("productCategory").value.trim(), type: document.getElementById("productType").value, status: document.getElementById("productStatus").value, sortOrder: Number(document.getElementById("productSortOrder").value), image: document.getElementById("productImageUrl").value.trim(), description: document.getElementById("productDescription").value.trim(), config };
+  try {
+    const response = await fetch(`${API_URL}/api/admin/products`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("aoAdminToken")}` }, body: JSON.stringify(payload) });
+    const data = await response.json(); if (!response.ok) throw new Error(data.message);
+    closeProductModal(); loadProducts();
+  } catch (error) { productFormError.textContent = error.message || "Could not save product."; productFormError.hidden = false; }
+});
 
 /* =========================
    LOGOUT

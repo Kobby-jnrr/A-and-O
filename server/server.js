@@ -14,48 +14,58 @@ const PORT = process.env.PORT || 3000;
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || "";
 const PAYSTACK_PUBLIC_KEY = process.env.PAYSTACK_PUBLIC_KEY || "";
 
-// ============================================================
-// PRODUCTS
-// ============================================================
+const PRODUCT_TYPES = [
+  "brukina-custom",
+  "flavor-size",
+  "parfait-custom",
+  "size-sweetness",
+];
 
-const PRODUCTS = {
-  A: {
-    name: "Brukina",
-    type: "brukina-custom",
-    price: 20,
-  },
+const PRODUCT_STATUSES = ["available", "out_of_stock", "unavailable"];
 
-  B: {
-    name: "Fresh Yoghurt Drink",
-    type: "flavor-size",
-    sizes: {
-      "500ml": 25,
-      "300ml": 15,
-      "250ml": 12,
-    },
-  },
+function productForApi(row) {
+  const config = row.config && typeof row.config === "object" ? row.config : {};
 
-  C: {
-    name: "Parfait",
-    type: "parfait-custom",
-    price: 40,
-  },
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category,
+    type: row.type,
+    ...config,
+    image: row.image_url,
+    description: row.description,
+    status: row.status,
+    sortOrder: row.sort_order,
+  };
+}
 
-  D: {
-    name: "Greek Yoghurt",
-    type: "size-sweetness",
-    prices: {
-      "500ml": {
-        sweetened: 50,
-        unsweetened: 45,
-      },
-      "1l": {
-        sweetened: 100,
-        unsweetened: 90,
-      },
-    },
-  },
-};
+function validateProductInput(input, { requireId = false } = {}) {
+  const product = input || {};
+  const result = {};
+
+  if (requireId || product.id !== undefined) {
+    result.id = String(product.id || "").trim();
+    if (!result.id || !/^[A-Za-z0-9_-]+$/.test(result.id)) {
+      throw new Error("Product ID may only use letters, numbers, hyphens, and underscores.");
+    }
+  }
+
+  for (const field of ["name", "category", "type", "status", "description", "image_url"]) {
+    if (product[field] !== undefined) result[field] = product[field];
+  }
+  if (product.image !== undefined) result.image_url = product.image;
+  if (product.sort_order !== undefined) result.sort_order = product.sort_order;
+  if (product.sortOrder !== undefined) result.sort_order = product.sortOrder;
+  if (product.config !== undefined) result.config = product.config;
+
+  if (result.name !== undefined && !String(result.name).trim()) throw new Error("Product name is required.");
+  if (result.type !== undefined && !PRODUCT_TYPES.includes(result.type)) throw new Error("Invalid product type.");
+  if (result.status !== undefined && !PRODUCT_STATUSES.includes(result.status)) throw new Error("Invalid product status.");
+  if (result.sort_order !== undefined && !Number.isInteger(Number(result.sort_order))) throw new Error("Sort order must be a whole number.");
+  if (result.config !== undefined && (!result.config || typeof result.config !== "object" || Array.isArray(result.config))) throw new Error("Product configuration must be an object.");
+
+  return result;
+}
 
 // ============================================================
 // MIDDLEWARE
@@ -146,6 +156,22 @@ app.post("/api/admin/login", (req, res) => {
     res.status(500).json({
       message: "We could not log you in right now. Please try again.",
     });
+  }
+});
+
+// ============================================================
+// PRODUCTS
+// ============================================================
+
+app.get("/api/products", async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT * FROM products WHERE status IN ('available', 'out_of_stock') ORDER BY sort_order, name`,
+    );
+    res.json(result.rows.map(productForApi));
+  } catch (error) {
+    console.error("Get public products error:", error);
+    res.status(500).json({ message: "We could not load products right now." });
   }
 });
 
@@ -257,13 +283,19 @@ app.post("/api/orders", async (req, res) => {
 
     for (const item of items) {
       const productId = String(item.productId || "").trim();
-      const product = PRODUCTS[productId];
+      const productResult = await db.query(
+        "SELECT * FROM products WHERE id = $1 LIMIT 1",
+        [productId],
+      );
+      const productRow = productResult.rows[0];
 
-      if (!product) {
+      if (!productRow || productRow.status !== "available") {
         return res.status(400).json({
-          message: `Invalid product: ${productId}`,
+          message: `This product is not available: ${productId}`,
         });
       }
+
+      const product = productForApi(productRow);
 
       const quantity = Number(item.quantity);
 
@@ -280,7 +312,7 @@ app.post("/api/orders", async (req, res) => {
       // BRUKINA
       // ------------------------------------------------------
 
-      if (productId === "A") {
+      if (product.type === "brukina-custom") {
         unitPrice = product.price;
 
         const coconutFlakes =
@@ -292,19 +324,19 @@ app.post("/api/orders", async (req, res) => {
       // ------------------------------------------------------
       // FRESH YOGHURT DRINK
       // ------------------------------------------------------
-      else if (productId === "B") {
+      else if (product.type === "flavor-size") {
         const size = String(item.sizeId || "").trim();
         const flavor = String(item.flavorId || "")
           .trim()
           .toLowerCase();
 
-        if (!product.sizes[size]) {
+        if (!product.sizes?.[size]) {
           return res.status(400).json({
             message: "Please select a valid size for Fresh Yoghurt Drink.",
           });
         }
 
-        if (!["plain", "strawberry"].includes(flavor)) {
+        if (!product.flavors?.[flavor]) {
           return res.status(400).json({
             message: "Please select a valid flavor for Fresh Yoghurt Drink.",
           });
@@ -320,26 +352,12 @@ app.post("/api/orders", async (req, res) => {
       // ------------------------------------------------------
       // PARFAIT
       // ------------------------------------------------------
-      else if (productId === "C") {
+      else if (product.type === "parfait-custom") {
         unitPrice = product.price;
 
-        const allowedFruits = [
-          "red_apples",
-          "red_grapes",
-          "mangoes",
-          "strawberries",
-          "bananas",
-          "pineapples",
-        ];
-
-        const allowedToppings = ["granola", "coconut_flakes"];
-
-        const allowedSyrups = [
-          "none",
-          "mango_syrup",
-          "pineapple_syrup",
-          "honey",
-        ];
+        const allowedFruits = Object.keys(product.fruits || {});
+        const allowedToppings = Object.keys(product.toppings || {});
+        const allowedSyrups = Object.keys(product.syrups || {});
 
         const fruits = Array.isArray(item.fruits) ? item.fruits : [];
 
@@ -375,26 +393,9 @@ app.post("/api/orders", async (req, res) => {
           });
         }
 
-        const fruitLabels = {
-          red_apples: "Red Apples",
-          red_grapes: "Red Grapes",
-          mangoes: "Mangoes",
-          strawberries: "Strawberries",
-          bananas: "Bananas",
-          pineapples: "Pineapples",
-        };
-
-        const toppingLabels = {
-          granola: "Granola",
-          coconut_flakes: "Coconut Flakes",
-        };
-
-        const syrupLabels = {
-          none: "No Syrup",
-          mango_syrup: "Mango Syrup",
-          pineapple_syrup: "Pineapple Syrup",
-          honey: "Honey",
-        };
+        const fruitLabels = product.fruits || {};
+        const toppingLabels = product.toppings || {};
+        const syrupLabels = product.syrups || {};
 
         const fruitText =
           fruits.length > 0
@@ -412,19 +413,19 @@ app.post("/api/orders", async (req, res) => {
       // ------------------------------------------------------
       // GREEK YOGHURT
       // ------------------------------------------------------
-      else if (productId === "D") {
+      else if (product.type === "size-sweetness") {
         const size = String(item.sizeId || "").trim();
         const sweetness = String(item.sweetnessId || "")
           .trim()
           .toLowerCase();
 
-        if (!["500ml", "1l"].includes(size)) {
+        if (!product.prices?.[size]) {
           return res.status(400).json({
             message: "Please select a valid size for Greek Yoghurt.",
           });
         }
 
-        if (!["sweetened", "unsweetened"].includes(sweetness)) {
+        if (!product.prices[size]?.[sweetness]) {
           return res.status(400).json({
             message:
               "Please select whether the Greek Yoghurt is sweetened or unsweetened.",
@@ -437,6 +438,8 @@ app.post("/api/orders", async (req, res) => {
           sweetness.charAt(0).toUpperCase() + sweetness.slice(1);
 
         description = `${size} - ${displaySweetness}`;
+      } else {
+        return res.status(400).json({ message: "This product has an unsupported configuration." });
       }
 
       calculatedTotal += unitPrice * quantity;
@@ -694,6 +697,70 @@ app.get("/api/orders/track/:orderNumber", async (req, res) => {
 // ============================================================
 // ADMIN — GET ALL ORDERS
 // ============================================================
+
+app.get("/api/admin/products", authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query("SELECT * FROM products ORDER BY sort_order, name");
+    res.json(result.rows.map(productForApi));
+  } catch (error) {
+    console.error("Get admin products error:", error);
+    res.status(500).json({ message: "We could not load products right now." });
+  }
+});
+
+app.post("/api/admin/products", authenticateToken, async (req, res) => {
+  try {
+    const product = validateProductInput(req.body, { requireId: true });
+    if (!product.name || !product.type || !product.config) {
+      return res.status(400).json({ message: "Product ID, name, type, and configuration are required." });
+    }
+    const result = await db.query(
+      `INSERT INTO products (id, name, category, type, config, image_url, description, status, sort_order)
+       VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9) RETURNING *`,
+      [product.id, String(product.name).trim(), String(product.category || "Beverage").trim(), product.type,
+        JSON.stringify(product.config), product.image_url || null, product.description || null,
+        product.status || "available", Number(product.sort_order || 0)],
+    );
+    res.status(201).json(productForApi(result.rows[0]));
+  } catch (error) {
+    console.error("Create product error:", error);
+    res.status(error.code === "23505" ? 409 : 400).json({ message: error.code === "23505" ? "That product ID already exists." : error.message || "Could not create product." });
+  }
+});
+
+app.patch("/api/admin/products/:id", authenticateToken, async (req, res) => {
+  try {
+    const product = validateProductInput(req.body);
+    const fields = [];
+    const values = [];
+    const columns = { name: "name", category: "category", type: "type", config: "config", image_url: "image_url", description: "description", status: "status", sort_order: "sort_order" };
+    for (const [key, column] of Object.entries(columns)) {
+      if (product[key] !== undefined) {
+        values.push(key === "config" ? JSON.stringify(product[key]) : key === "sort_order" ? Number(product[key]) : product[key]);
+        fields.push(`${column} = $${values.length}${key === "config" ? "::jsonb" : ""}`);
+      }
+    }
+    if (!fields.length) return res.status(400).json({ message: "No product changes were provided." });
+    values.push(String(req.params.id));
+    const result = await db.query(`UPDATE products SET ${fields.join(", ")} WHERE id = $${values.length} RETURNING *`, values);
+    if (!result.rows[0]) return res.status(404).json({ message: "Product not found." });
+    res.json(productForApi(result.rows[0]));
+  } catch (error) {
+    console.error("Update product error:", error);
+    res.status(400).json({ message: error.message || "Could not update product." });
+  }
+});
+
+app.delete("/api/admin/products/:id", authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query("DELETE FROM products WHERE id = $1 RETURNING id", [String(req.params.id)]);
+    if (!result.rows[0]) return res.status(404).json({ message: "Product not found." });
+    res.status(204).end();
+  } catch (error) {
+    console.error("Delete product error:", error);
+    res.status(500).json({ message: "Could not delete product." });
+  }
+});
 
 app.get("/api/admin/orders", authenticateToken, async (req, res) => {
   try {

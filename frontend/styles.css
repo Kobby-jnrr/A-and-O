@@ -691,6 +691,29 @@ a {
   background: var(--accent-deep);
 }
 
+.product-add-btn:disabled {
+  cursor: not-allowed;
+  background: #94a3b8;
+  transform: none;
+}
+
+.product-out-of-stock {
+  opacity: 0.58;
+  filter: grayscale(0.55);
+}
+
+.product-stock-badge {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
 .placeholder-note {
   margin: 28px 0 0;
   color: var(--text-light);

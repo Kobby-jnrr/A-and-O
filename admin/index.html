@@ -100,9 +100,13 @@
       <!-- CONTENT -->
 
       <section class="dashboard-content">
+        <nav class="dashboard-tabs" aria-label="Dashboard sections">
+          <button type="button" class="dashboard-tab active" data-tab="orders">Orders</button>
+          <button type="button" class="dashboard-tab" data-tab="products">Products</button>
+        </nav>
         <!-- INTRO -->
 
-        <div class="dashboard-intro">
+        <div id="ordersIntro" class="dashboard-intro">
           <div>
             <span class="eyebrow">ORDER MANAGEMENT</span>
 
@@ -117,7 +121,7 @@
 
         <!-- SUMMARY -->
 
-        <div class="summary-grid">
+        <div id="ordersSummary" class="summary-grid">
           <div class="summary-card">
             <div class="summary-icon">🧾</div>
 
@@ -169,7 +173,7 @@
 
         <!-- ORDERS -->
 
-        <section class="orders-section">
+        <section id="ordersSection" class="orders-section">
           <div class="section-heading">
             <div>
               <span class="eyebrow">CUSTOMER ORDERS</span>
@@ -195,8 +199,52 @@
             <p>Customer orders will appear here once they are submitted.</p>
           </div>
         </section>
+
+        <section id="productsSection" class="products-section" hidden>
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">PRODUCT CATALOGUE</span>
+              <h2>Products</h2>
+              <p>Add products, control customer availability, or remove old products.</p>
+            </div>
+            <button type="button" id="addProductBtn" class="refresh-btn">Add product</button>
+          </div>
+          <div id="productsContainer" class="products-container"></div>
+        </section>
       </section>
     </main>
+
+    <div id="productModal" class="product-modal" hidden>
+      <div class="product-modal-backdrop" data-close-product-modal></div>
+      <section class="product-modal-card" role="dialog" aria-modal="true" aria-labelledby="productModalTitle">
+        <button type="button" class="modal-close" data-close-product-modal aria-label="Close">&times;</button>
+        <span class="eyebrow">PRODUCT CATALOGUE</span>
+        <h2 id="productModalTitle">Add product</h2>
+        <p class="product-form-help">Configure the options as JSON. Templates are supplied when you choose a product type.</p>
+        <form id="productForm" class="product-form">
+          <label>Product ID <input id="productId" required placeholder="e.g. E" pattern="[A-Za-z0-9_-]+" /></label>
+          <label>Name <input id="productName" required placeholder="Product name" /></label>
+          <label>Category <input id="productCategory" value="Fresh Beverage" /></label>
+          <label>Type
+            <select id="productType" required>
+              <option value="brukina-custom">Brukina custom</option>
+              <option value="flavor-size">Flavor and size</option>
+              <option value="parfait-custom">Parfait custom</option>
+              <option value="size-sweetness">Size and sweetness</option>
+            </select>
+          </label>
+          <label>Status
+            <select id="productStatus"><option value="available">Available</option><option value="out_of_stock">Out of stock</option><option value="unavailable">Temporarily unavailable</option></select>
+          </label>
+          <label>Sort order <input id="productSortOrder" type="number" value="0" /></label>
+          <label>Image URL <input id="productImageUrl" type="url" placeholder="https://..." /></label>
+          <label class="full-width">Description <textarea id="productDescription" rows="2"></textarea></label>
+          <label class="full-width">Configuration JSON <textarea id="productConfig" rows="12" required></textarea></label>
+          <p id="productFormError" class="error-message" hidden></p>
+          <button type="submit" class="primary-btn">Save product</button>
+        </form>
+      </section>
+    </div>
 
     <script src="admin.js"></script>
   </body>

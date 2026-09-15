@@ -12,101 +12,7 @@ const MAX_PARFAIT_FRUITS = 3;
    PRODUCT DATA
 ========================================================= */
 
-const PRODUCTS = {
-  A: {
-    id: "A",
-    name: "Brukina",
-    category: "Fresh Beverage",
-    type: "brukina-custom",
-    price: 20,
-    image:
-      "https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=900&q=85",
-    description:
-      "Creamy yoghurt and millet drink, made fresh. Coconut flakes are optional.",
-  },
-
-  B: {
-    id: "B",
-    name: "Fresh Yoghurt Drink",
-    category: "Fresh Beverage",
-    type: "flavor-size",
-
-    sizes: {
-      "500ml": 25,
-      "300ml": 15,
-      "250ml": 12,
-    },
-
-    flavors: {
-      plain: "Plain",
-      strawberry: "Strawberry",
-    },
-
-    image:
-      "https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=900&q=85",
-
-    description:
-      "A smooth, refreshing yoghurt drink available in different sizes and flavors.",
-  },
-
-  C: {
-    id: "C",
-    name: "Parfait",
-    category: "Fresh Beverage",
-    type: "parfait-custom",
-    price: 40,
-
-    fruits: {
-      red_apples: "Red Apples",
-      red_grapes: "Red Grapes",
-      mangoes: "Mangoes",
-      kiwi: "Kiwi",
-    },
-
-    toppings: {
-      granola: "Granola",
-      coconut_flakes: "Coconut Flakes",
-    },
-
-    syrups: {
-      none: "No Syrup",
-      mango_syrup: "Mango Syrup",
-      pineapple_syrup: "Pineapple Syrup",
-      honey: "Honey",
-    },
-
-    image:
-      "https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=900&q=85",
-
-    description:
-      "Creamy yoghurt parfait with your choice of fruits, toppings and syrup.",
-  },
-
-  D: {
-    id: "D",
-    name: "Greek Yoghurt",
-    category: "Fresh Beverage",
-    type: "size-sweetness",
-
-    prices: {
-      "500ml": {
-        sweetened: 50,
-        unsweetened: 45,
-      },
-
-      "1l": {
-        sweetened: 100,
-        unsweetened: 90,
-      },
-    },
-
-    image:
-      "https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=900&q=85",
-
-    description:
-      "Rich, creamy Greek yoghurt available in two sizes and two sweetness options.",
-  },
-};
+let PRODUCTS = {};
 
 /* =========================================================
    STATE
@@ -262,6 +168,31 @@ function getCartItemDescription(product, options = {}) {
    PRODUCT RENDERING
 ========================================================= */
 
+async function loadProducts() {
+  const productList = $("#productList");
+  if (productList) productList.innerHTML = `<p class="placeholder-note">Loading products...</p>`;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/products`);
+    if (!response.ok) {
+      throw new Error(
+        response.status === 404
+          ? "The product API is not deployed yet."
+          : "Could not load products.",
+      );
+    }
+    const products = await response.json();
+    PRODUCTS = (Array.isArray(products) ? products : []).reduce((map, product) => {
+      map[product.id] = product;
+      return map;
+    }, {});
+    renderProducts();
+  } catch (error) {
+    console.error("Could not load products:", error);
+    if (productList) productList.innerHTML = `<p class="placeholder-note">${escapeHtml(error.message || "Products are unavailable right now. Please refresh and try again.")}</p>`;
+  }
+}
+
 function renderProducts() {
   const productList = $("#productList");
 
@@ -277,6 +208,7 @@ function renderProducts() {
 }
 
 function renderProduct(product) {
+  const outOfStock = product.status === "out_of_stock";
   let startingPrice = 0;
 
   if (product.type === "brukina-custom") {
@@ -299,8 +231,8 @@ function renderProduct(product) {
 
   return `
     <article
-      class="product-row"
       data-product-id="${escapeHtml(product.id)}"
+      class="product-row${outOfStock ? " product-out-of-stock" : ""}"
     >
 
       <!--
@@ -311,7 +243,7 @@ function renderProduct(product) {
       <div class="product-image-wrap">
         <img
           class="product-image"
-          src="${escapeHtml(product.image)}"
+          src="${escapeHtml(product.image || "images/webpic.png")}"
           alt="${escapeHtml(product.name)}"
           loading="lazy"
         />
@@ -326,6 +258,8 @@ function renderProduct(product) {
         <h3>
           ${escapeHtml(product.name)}
         </h3>
+
+        ${outOfStock ? `<span class="product-stock-badge">Out of stock</span>` : ""}
 
         <p class="product-description">
           ${escapeHtml(product.description)}
@@ -343,19 +277,20 @@ function renderProduct(product) {
           type="button"
           class="product-add-btn"
           data-product-id="${escapeHtml(product.id)}"
+          ${outOfStock ? "disabled aria-disabled=\"true\"" : ""}
         >
-          Customize
+          ${outOfStock ? "Out of stock" : "Customize"}
         </button>
 
       </div>
 
-      <div
+      ${outOfStock ? "" : `<div
         class="customize-box"
         data-customize-box="${escapeHtml(product.id)}"
         hidden
       >
         ${renderCustomization(product)}
-      </div>
+      </div>`}
 
     </article>
   `;
@@ -633,6 +568,8 @@ function renderCustomization(product) {
   }
 
   if (product.type === "size-sweetness") {
+    const sizes = Object.keys(product.prices || {});
+    const sweetnesses = [...new Set(Object.values(product.prices || {}).flatMap((prices) => Object.keys(prices || {})))];
     return `
       <div class="customize-grid">
 
@@ -644,23 +581,7 @@ function renderCustomization(product) {
 
           <div class="option-list">
 
-            <button
-              type="button"
-              class="option-button greek-size-option active"
-              data-greek-size="500ml"
-              aria-pressed="true"
-            >
-              500 ml
-            </button>
-
-            <button
-              type="button"
-              class="option-button greek-size-option"
-              data-greek-size="1l"
-              aria-pressed="false"
-            >
-              1 Liter
-            </button>
+            ${sizes.map((size, index) => `<button type="button" class="option-button greek-size-option ${index === 0 ? "active" : ""}" data-greek-size="${escapeHtml(size)}" aria-pressed="${index === 0}">${escapeHtml(size)}</button>`).join("")}
 
           </div>
 
@@ -674,23 +595,7 @@ function renderCustomization(product) {
 
           <div class="option-list">
 
-            <button
-              type="button"
-              class="option-button greek-sweetness-option active"
-              data-greek-sweetness="sweetened"
-              aria-pressed="true"
-            >
-              Sweetened
-            </button>
-
-            <button
-              type="button"
-              class="option-button greek-sweetness-option"
-              data-greek-sweetness="unsweetened"
-              aria-pressed="false"
-            >
-              Unsweetened
-            </button>
+            ${sweetnesses.map((sweetness, index) => `<button type="button" class="option-button greek-sweetness-option ${index === 0 ? "active" : ""}" data-greek-sweetness="${escapeHtml(sweetness)}" aria-pressed="${index === 0}">${escapeHtml(sweetness)}</button>`).join("")}
 
           </div>
 
@@ -2969,8 +2874,8 @@ function initializeKeyboardEvents() {
    INITIALIZE
 ========================================================= */
 
-function initialize() {
-  renderProducts();
+async function initialize() {
+  await loadProducts();
 
   renderCart();
 

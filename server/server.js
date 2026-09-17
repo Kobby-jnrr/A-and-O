@@ -1446,6 +1446,43 @@ app.patch(
 // PAYSTACK — INITIALIZE TRANSACTION
 // ============================================================
 
+async function upsertPaystackCustomer({ email, firstName, lastName, phone }) {
+  const headers = {
+    Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+    "Content-Type": "application/json",
+  };
+  const customerData = {
+    email,
+    first_name: firstName,
+    last_name: lastName,
+    phone,
+  };
+
+  try {
+    const createResponse = await axios.post(
+      "https://api.paystack.co/customer",
+      customerData,
+      { headers },
+    );
+    return createResponse.data?.data;
+  } catch (createError) {
+    const existingResponse = await axios.get(
+      `https://api.paystack.co/customer/${encodeURIComponent(email)}`,
+      { headers },
+    );
+    const existingCustomer = existingResponse.data?.data;
+
+    if (!existingCustomer?.customer_code) throw createError;
+
+    const updateResponse = await axios.put(
+      `https://api.paystack.co/customer/${encodeURIComponent(existingCustomer.customer_code)}`,
+      customerData,
+      { headers },
+    );
+    return updateResponse.data?.data || existingCustomer;
+  }
+}
+
 app.post("/api/paystack/initialize", async (req, res) => {
   try {
     const { email, amountGHS, customerName, customerPhone } = req.body;
@@ -1464,10 +1501,29 @@ app.post("/api/paystack/initialize", async (req, res) => {
     // Paystack expects amount in the lowest currency unit (pesewas for GHS)
     const amountKobo = Math.round(totalAmountGHS * 100);
 
+    const nameParts = String(customerName || "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    const firstName = nameParts.shift() || "Customer";
+    const lastName = nameParts.join(" ") || firstName;
+
+    const customer = await upsertPaystackCustomer({
+      email,
+      firstName,
+      lastName,
+      phone: String(customerPhone || "").trim(),
+    });
+
+    if (!customer?.customer_code) {
+      throw new Error("Paystack did not return a customer code.");
+    }
+
     const payload = {
       email,
       amount: amountKobo,
       currency: "GHS",
+      customer: customer?.customer_code,
       metadata: {
         customer_name: customerName,
         customer_phone: customerPhone,

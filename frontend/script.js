@@ -3,7 +3,7 @@
    Main frontend JavaScript
 ========================================================= */
 
-const API_BASE_URL = "http://localhost:3000/api";
+const API_BASE_URL = "https://a-and-o-beverages.onrender.com/api";
 const CURRENCY = "GHS";
 
 const MAX_PARFAIT_FRUITS = 3;

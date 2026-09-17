@@ -464,6 +464,8 @@ function renderCustomization(product) {
 
       <div class="customize-actions">
 
+        ${renderProductQuantityControl()}
+
         <button
           type="button"
           class="product-add-btn confirm-product-btn"
@@ -563,6 +565,8 @@ function renderCustomization(product) {
       </div>
 
       <div class="customize-actions">
+
+        ${renderProductQuantityControl()}
 
         <button
           type="button"
@@ -690,6 +694,8 @@ function renderCustomization(product) {
 
       <div class="customize-actions">
 
+        ${renderProductQuantityControl()}
+
         <button
           type="button"
           class="product-add-btn confirm-product-btn"
@@ -776,6 +782,8 @@ function renderCustomization(product) {
 
       <div class="customize-actions">
 
+        ${renderProductQuantityControl()}
+
         <button
           type="button"
           class="product-add-btn confirm-product-btn"
@@ -789,6 +797,19 @@ function renderCustomization(product) {
   }
 
   return "";
+}
+
+function renderProductQuantityControl() {
+  return `
+    <div class="product-quantity-control" aria-label="Quantity">
+      <span class="product-quantity-label">Quantity</span>
+      <div class="product-quantity-stepper">
+        <button type="button" class="product-quantity-btn" data-product-quantity-action="decrease" aria-label="Decrease quantity">−</button>
+        <span class="product-quantity-value" data-product-quantity-value aria-live="polite">1</span>
+        <button type="button" class="product-quantity-btn" data-product-quantity-action="increase" aria-label="Increase quantity">+</button>
+      </div>
+    </div>
+  `;
 }
 
 /* =========================================================
@@ -857,6 +878,18 @@ function initializeProductInteractions() {
   $$(".confirm-product-btn").forEach((button) => {
     button.addEventListener("click", () => {
       addCustomizedProduct(button.dataset.productId);
+    });
+  });
+
+  $$(".product-quantity-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      const value = button
+        .closest(".product-quantity-control")
+        ?.querySelector("[data-product-quantity-value]");
+      if (!value) return;
+      const change =
+        button.dataset.productQuantityAction === "increase" ? 1 : -1;
+      value.textContent = Math.max(1, Number(value.textContent || 1) + change);
     });
   });
 
@@ -1129,6 +1162,13 @@ function addCustomizedProduct(productId) {
     return;
   }
 
+  const selectedQuantity = Math.max(
+    1,
+    Number(
+      box.querySelector("[data-product-quantity-value]")?.textContent || 1,
+    ),
+  );
+
   const options = {
     flavorId: "plain",
     sizeId: null,
@@ -1226,7 +1266,7 @@ function addCustomizedProduct(productId) {
   );
 
   if (existingItem) {
-    existingItem.quantity += 1;
+    existingItem.quantity += selectedQuantity;
   } else {
     cart.push({
       cartId: `${productId}-${Date.now()}-${Math.random()
@@ -1237,7 +1277,7 @@ function addCustomizedProduct(productId) {
 
       productName: product.name,
 
-      quantity: 1,
+      quantity: selectedQuantity,
 
       unitPrice,
 
@@ -1254,6 +1294,9 @@ function addCustomizedProduct(productId) {
   animateFlyToCart();
 
   showSmallNotice(`${product.name} added to your order.`);
+
+  const quantityValue = box.querySelector("[data-product-quantity-value]");
+  if (quantityValue) quantityValue.textContent = "1";
 }
 
 /* =========================================================
@@ -1849,7 +1892,10 @@ async function submitOrder(event) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        email: `${customerName.toLowerCase().replace(/\s+/g, ".").replace(/[^a-z0-9.]/g, "")}@aandobeverages.com`,
+        email: `${customerName
+          .toLowerCase()
+          .replace(/\s+/g, ".")
+          .replace(/[^a-z0-9.]/g, "")}@aandobeverages.com`,
         amountGHS,
         customerName,
         customerPhone,

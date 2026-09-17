@@ -215,6 +215,15 @@ function formatOptionLabel(value) {
     );
 }
 
+function optionIsAvailable(product, group, id) {
+  return product?.stock?.[group]?.[id] !== "out_of_stock";
+}
+
+function firstAvailableOption(entries, product, group, preferred) {
+  if (preferred && optionIsAvailable(product, group, preferred)) return preferred;
+  return Object.keys(entries || {}).find((id) => optionIsAvailable(product, group, id));
+}
+
 function renderProducts() {
   const productList = $("#productList");
 
@@ -341,7 +350,7 @@ function renderCustomization(product) {
             ${Object.entries(toppings)
               .map(
                 ([id, label]) =>
-                  `<button type="button" class="option-button brukina-topping-option" data-brukina-topping="${escapeHtml(id)}" aria-pressed="false">${escapeHtml(label)}</button>`,
+                  `<button type="button" class="option-button brukina-topping-option${optionIsAvailable(product, "toppings", id) ? "" : " option-unavailable"}" data-brukina-topping="${escapeHtml(id)}" aria-pressed="false"${optionIsAvailable(product, "toppings", id) ? "" : ' disabled aria-disabled="true"'}>${escapeHtml(label)}${optionIsAvailable(product, "toppings", id) ? "" : " (Out of stock)"}</button>`,
               )
               .join("")}
 
@@ -390,9 +399,8 @@ function renderCustomization(product) {
   }
 
   if (product.type === "flavor-size") {
-    const defaultSize = Object.keys(product.sizes || {}).includes("500ml")
-      ? "500ml"
-      : Object.keys(product.sizes || {})[0];
+    const defaultSize = firstAvailableOption(product.sizes, product, "sizes", "500ml");
+    const defaultFlavor = firstAvailableOption(product.flavors, product, "flavors");
     return `
       <div class="customize-grid">
 
@@ -406,16 +414,15 @@ function renderCustomization(product) {
 
             ${Object.entries(product.flavors)
               .map(
-                ([id, name], index) => `
+                ([id, name]) => `
                   <button
                     type="button"
-                    class="option-button flavor-option ${
-                      index === 0 ? "active" : ""
-                    }"
+                    class="option-button flavor-option ${id === defaultFlavor ? "active" : ""}${optionIsAvailable(product, "flavors", id) ? "" : " option-unavailable"}"
                     data-flavor-id="${escapeHtml(id)}"
-                    aria-pressed="${index === 0 ? "true" : "false"}"
+                    aria-pressed="${id === defaultFlavor ? "true" : "false"}"
+                    ${optionIsAvailable(product, "flavors", id) ? "" : 'disabled aria-disabled="true"'}
                   >
-                    ${escapeHtml(name)}
+                    ${escapeHtml(name)}${optionIsAvailable(product, "flavors", id) ? "" : " (Out of stock)"}
                   </button>
                 `,
               )
@@ -438,13 +445,12 @@ function renderCustomization(product) {
                 ([id, price]) => `
                   <button
                     type="button"
-                    class="option-button size-option ${
-                      id === defaultSize ? "active" : ""
-                    }"
+                    class="option-button size-option ${id === defaultSize ? "active" : ""}${optionIsAvailable(product, "sizes", id) ? "" : " option-unavailable"}"
                     data-size-id="${escapeHtml(id)}"
                     aria-pressed="${id === defaultSize ? "true" : "false"}"
+                    ${optionIsAvailable(product, "sizes", id) ? "" : 'disabled aria-disabled="true"'}
                   >
-                    ${escapeHtml(formatOptionLabel(id))}
+                    ${escapeHtml(formatOptionLabel(id))}${optionIsAvailable(product, "sizes", id) ? "" : " (Out of stock)"}
                   </button>
                 `,
               )
@@ -476,6 +482,7 @@ function renderCustomization(product) {
   }
 
   if (product.type === "parfait-custom") {
+    const defaultSyrup = firstAvailableOption(product.syrups, product, "syrups", "none");
     return `
       <div class="customize-grid">
 
@@ -492,11 +499,12 @@ function renderCustomization(product) {
                 ([id, name]) => `
                   <button
                     type="button"
-                    class="option-button parfait-fruit-option"
+                    class="option-button parfait-fruit-option${optionIsAvailable(product, "fruits", id) ? "" : " option-unavailable"}"
                     data-fruit-id="${escapeHtml(id)}"
                     aria-pressed="false"
+                    ${optionIsAvailable(product, "fruits", id) ? "" : 'disabled aria-disabled="true"'}
                   >
-                    ${escapeHtml(name)}
+                    ${escapeHtml(name)}${optionIsAvailable(product, "fruits", id) ? "" : " (Out of stock)"}
                   </button>
                 `,
               )
@@ -523,11 +531,12 @@ function renderCustomization(product) {
                 ([id, name]) => `
                   <button
                     type="button"
-                    class="option-button parfait-topping-option"
+                    class="option-button parfait-topping-option${optionIsAvailable(product, "toppings", id) ? "" : " option-unavailable"}"
                     data-topping-id="${escapeHtml(id)}"
                     aria-pressed="false"
+                    ${optionIsAvailable(product, "toppings", id) ? "" : 'disabled aria-disabled="true"'}
                   >
-                    ${escapeHtml(name)}
+                    ${escapeHtml(name)}${optionIsAvailable(product, "toppings", id) ? "" : " (Out of stock)"}
                   </button>
                 `,
               )
@@ -547,16 +556,15 @@ function renderCustomization(product) {
 
             ${Object.entries(product.syrups)
               .map(
-                ([id, name], index) => `
+                ([id, name]) => `
                   <button
                     type="button"
-                    class="option-button parfait-syrup-option ${
-                      index === 0 ? "active" : ""
-                    }"
+                    class="option-button parfait-syrup-option ${id === defaultSyrup ? "active" : ""}${optionIsAvailable(product, "syrups", id) ? "" : " option-unavailable"}"
                     data-syrup-id="${escapeHtml(id)}"
-                    aria-pressed="${index === 0 ? "true" : "false"}"
+                    aria-pressed="${id === defaultSyrup ? "true" : "false"}"
+                    ${optionIsAvailable(product, "syrups", id) ? "" : 'disabled aria-disabled="true"'}
                   >
-                    ${escapeHtml(name)}
+                    ${escapeHtml(name)}${optionIsAvailable(product, "syrups", id) ? "" : " (Out of stock)"}
                   </button>
                 `,
               )
@@ -603,7 +611,7 @@ function renderCustomization(product) {
         ),
       ),
     ];
-    const defaultSize = sizes.includes("1l") ? "1l" : sizes[0];
+    const defaultSize = firstAvailableOption(product.prices, product, "sizes", "1l");
     const defaultSweetness = sweetnesses.includes("sweetened")
       ? "sweetened"
       : sweetnesses[0];
@@ -618,7 +626,7 @@ function renderCustomization(product) {
 
           <div class="option-list">
 
-            ${sizes.map((size) => `<button type="button" class="option-button greek-size-option ${size === defaultSize ? "active" : ""}" data-greek-size="${escapeHtml(size)}" aria-pressed="${size === defaultSize}">${escapeHtml(formatOptionLabel(size))}</button>`).join("")}
+            ${sizes.map((size) => `<button type="button" class="option-button greek-size-option ${size === defaultSize ? "active" : ""}${optionIsAvailable(product, "sizes", size) ? "" : " option-unavailable"}" data-greek-size="${escapeHtml(size)}" aria-pressed="${size === defaultSize}"${optionIsAvailable(product, "sizes", size) ? "" : ' disabled aria-disabled="true"'}>${escapeHtml(formatOptionLabel(size))}${optionIsAvailable(product, "sizes", size) ? "" : " (Out of stock)"}</button>`).join("")}
 
           </div>
 

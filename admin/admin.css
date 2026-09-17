@@ -1141,15 +1141,15 @@ select {
 }
 .option-row {
   display: grid;
-  grid-template-columns: 1fr 1.4fr 1fr auto;
+  grid-template-columns: 1fr 1.4fr 1fr 1fr auto;
   gap: 8px;
   margin-top: 8px;
 }
 .option-row:not(:has([data-option-price])) {
-  grid-template-columns: 1fr 1.4fr auto;
+  grid-template-columns: 1fr 1.4fr 1fr auto;
 }
 .sweetness-row {
-  grid-template-columns: 1fr 1fr 1fr auto;
+  grid-template-columns: 1fr 1fr 1fr 1fr auto;
 }
 .remove-option-btn {
   padding: 7px 9px;

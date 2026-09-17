@@ -828,14 +828,23 @@ function optionRows(entries = {}, group, includePrice = false) {
   return Object.entries(entries)
     .map(
       ([id, value]) =>
-        `<div class="option-row" data-option-group="${group}"><input data-option-id value="${escapeHtml(id)}" placeholder="ID" /><input data-option-label value="${escapeHtml(includePrice ? id : value)}" placeholder="${includePrice ? "Size" : "Name"}" />${includePrice ? `<input data-option-price type="number" min="0" step="0.01" value="${escapeHtml(value)}" placeholder="Price" />` : ""}<button type="button" class="remove-option-btn">Remove</button></div>`,
+        `<div class="option-row" data-option-group="${group}"><input data-option-id value="${escapeHtml(id)}" placeholder="ID" /><input data-option-label value="${escapeHtml(includePrice ? id : value)}" placeholder="${includePrice ? "Size" : "Name"}" />${includePrice ? `<input data-option-price type="number" min="0" step="0.01" value="${escapeHtml(value)}" placeholder="Price" />` : ""}<select data-option-status aria-label="${escapeHtml(id)} stock status"><option value="available">In stock</option><option value="out_of_stock">Out of stock</option></select><button type="button" class="remove-option-btn">Remove</button></div>`,
     )
     .join("");
 }
 
+function applyOptionStockStatuses(config = {}) {
+  productFields.querySelectorAll(".option-row").forEach((row) => {
+    const group = row.dataset.optionGroup;
+    const id = row.querySelector("[data-option-id], [data-size]")?.value;
+    const select = row.querySelector("[data-option-status]");
+    if (select) select.value = config.stock?.[group]?.[id] || "available";
+  });
+}
+
 function renderProductFields(type, config = {}) {
   if (type === "brukina-custom") {
-    productFields.innerHTML = `<h3>Brukina details</h3><label>Price (GHS)<input id="basePrice" type="number" min="0" step="0.01" value="${escapeHtml(config.price ?? 20)}" required /></label><div class="options-editor"><div class="options-heading"><strong>Toppings</strong><button type="button" class="add-option-btn" data-group="brukina-toppings">Add topping</button></div><div id="brukina-toppings">${optionRows(config.toppings || { coconut_flakes: "Coconut Flakes" }, "brukina-toppings")}</div></div>`;
+    productFields.innerHTML = `<h3>Brukina details</h3><label>Price (GHS)<input id="basePrice" type="number" min="0" step="0.01" value="${escapeHtml(config.price ?? 20)}" required /></label><div class="options-editor"><div class="options-heading"><strong>Toppings</strong><button type="button" class="add-option-btn" data-group="brukina-toppings">Add topping</button></div><div id="brukina-toppings">${optionRows(config.toppings || { coconut_flakes: "Coconut Flakes" }, "toppings")}</div></div>`;
   } else if (type === "flavor-size") {
     productFields.innerHTML = `<h3>Yoghurt details</h3><div class="options-editor"><div class="options-heading"><strong>Flavors</strong><button type="button" class="add-option-btn" data-group="flavors">Add flavor</button></div><div id="flavors">${optionRows(config.flavors || { plain: "Plain" }, "flavors")}</div></div><div class="options-editor"><div class="options-heading"><strong>Sizes and prices</strong><button type="button" class="add-option-btn" data-group="sizes">Add size</button></div><div id="sizes">${optionRows(config.sizes || { "500ml": 25 }, "sizes", true)}</div></div>`;
   } else if (type === "parfait-custom") {
@@ -849,7 +858,7 @@ function renderProductFields(type, config = {}) {
     )
       .map(
         ([size, values]) =>
-          `<div class="option-row sweetness-row"><input data-size value="${escapeHtml(size)}" placeholder="Size" /><input data-sweetened type="number" min="0" step="0.01" value="${escapeHtml(values.sweetened ?? "")}" placeholder="Sweetened price" /><input data-unsweetened type="number" min="0" step="0.01" value="${escapeHtml(values.unsweetened ?? "")}" placeholder="Unsweetened price" /><button type="button" class="remove-option-btn">Remove</button></div>`,
+          `<div class="option-row sweetness-row" data-option-group="sizes"><input data-size value="${escapeHtml(size)}" placeholder="Size" /><input data-sweetened type="number" min="0" step="0.01" value="${escapeHtml(values.sweetened ?? "")}" placeholder="Sweetened price" /><input data-unsweetened type="number" min="0" step="0.01" value="${escapeHtml(values.unsweetened ?? "")}" placeholder="Unsweetened price" /><select data-option-status aria-label="${escapeHtml(size)} stock status"><option value="available">In stock</option><option value="out_of_stock">Out of stock</option></select><button type="button" class="remove-option-btn">Remove</button></div>`,
       )
       .join("")}</div></div>`;
   }
@@ -867,6 +876,7 @@ function renderProductFields(type, config = {}) {
         button.closest(".option-row").remove(),
       ),
     );
+  applyOptionStockStatuses(config);
 }
 
 function addOptionRow(group) {
@@ -875,14 +885,14 @@ function addOptionRow(group) {
   if (group === "sizes")
     container.insertAdjacentHTML(
       "beforeend",
-      optionRows({ "": "" }, group, true),
+      optionRows({ "": "" }, "sizes", true),
     );
   else if (group === "sweetness-prices")
     container.insertAdjacentHTML(
       "beforeend",
-      `<div class="option-row sweetness-row"><input data-size placeholder="Size" /><input data-sweetened type="number" min="0" step="0.01" placeholder="Sweetened price" /><input data-unsweetened type="number" min="0" step="0.01" placeholder="Unsweetened price" /><button type="button" class="remove-option-btn">Remove</button></div>`,
+      `<div class="option-row sweetness-row" data-option-group="sizes"><input data-size placeholder="Size" /><input data-sweetened type="number" min="0" step="0.01" placeholder="Sweetened price" /><input data-unsweetened type="number" min="0" step="0.01" placeholder="Unsweetened price" /><select data-option-status aria-label="Size stock status"><option value="available">In stock</option><option value="out_of_stock">Out of stock</option></select><button type="button" class="remove-option-btn">Remove</button></div>`,
     );
-  else container.insertAdjacentHTML("beforeend", optionRows({ "": "" }, group));
+  else container.insertAdjacentHTML("beforeend", optionRows({ "": "" }, group === "brukina-toppings" ? "toppings" : group));
   container.lastElementChild
     .querySelector(".remove-option-btn")
     .addEventListener("click", (event) =>
@@ -904,16 +914,49 @@ function collectOptions(group, hasPrice = false) {
   }, {});
 }
 
+function collectStock(group, id) {
+  const row = [...document.querySelectorAll(`[data-option-group="${group}"]`)].find(
+    (candidate) => candidate.querySelector("[data-option-id], [data-size]")?.value.trim() === id,
+  );
+  return row?.querySelector("[data-option-status]")?.value || "available";
+}
+
+function collectConfigStock(type) {
+  const stock = {};
+  const addGroup = (group, ids) => {
+    stock[group] = {};
+    ids.forEach((id) => {
+      if (id) stock[group][id] = collectStock(group, id);
+    });
+  };
+  if (type === "brukina-custom") addGroup("toppings", Object.keys(collectOptions("toppings")));
+  if (type === "flavor-size") {
+    addGroup("flavors", Object.keys(collectOptions("flavors")));
+    addGroup("sizes", Object.keys(collectOptions("sizes", true)));
+  }
+  if (type === "parfait-custom") ["fruits", "toppings", "syrups"].forEach((group) => addGroup(group, Object.keys(collectOptions(group))));
+  if (type === "size-sweetness") {
+    stock.sizes = {};
+    document.querySelectorAll(".sweetness-row").forEach((row) => {
+      const id = row.querySelector("[data-size]").value.trim();
+      if (id) stock.sizes[id] = row.querySelector("[data-option-status]")?.value || "available";
+    });
+  }
+  return stock;
+}
+
 function collectConfig(type) {
   if (type === "brukina-custom")
     return {
       price: Number(document.getElementById("basePrice").value),
-      toppings: collectOptions("brukina-toppings"),
+      toppings: collectOptions("toppings"),
+      stock: collectConfigStock(type),
     };
   if (type === "flavor-size")
     return {
       flavors: collectOptions("flavors"),
       sizes: collectOptions("sizes", true),
+      stock: collectConfigStock(type),
     };
   if (type === "parfait-custom")
     return {
@@ -921,8 +964,10 @@ function collectConfig(type) {
       fruits: collectOptions("fruits"),
       toppings: collectOptions("toppings"),
       syrups: collectOptions("syrups"),
+      stock: collectConfigStock(type),
     };
   return {
+    stock: collectConfigStock(type),
     prices: [...document.querySelectorAll(".sweetness-row")].reduce(
       (prices, row) => {
         const size = row.querySelector("[data-size]").value.trim();

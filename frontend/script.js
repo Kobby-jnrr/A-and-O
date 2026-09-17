@@ -1849,7 +1849,7 @@ async function submitOrder(event) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        email: `${customerPhone.replace(/\s/g, "")}@aoandbeverages.com`,
+        email: `${customerName.toLowerCase().replace(/\s+/g, ".").replace(/[^a-z0-9.]/g, "")}@aandobeverages.com`,
         amountGHS,
         customerName,
         customerPhone,

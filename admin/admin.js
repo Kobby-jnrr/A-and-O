@@ -47,21 +47,18 @@ loginForm.addEventListener("submit", async (event) => {
   loginError.hidden = true;
 
   const username = document.getElementById("username").value.trim();
-
   const password = document.getElementById("password").value;
+
+  const submitBtn = loginForm.querySelector("button[type=submit]");
+  const originalHTML = submitBtn.innerHTML;
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = `<span class="login-btn-spinner"></span><span>Logging in…</span>`;
 
   try {
     const response = await fetch(`${API_URL}/api/admin/login`, {
       method: "POST",
-
-      headers: {
-        "Content-Type": "application/json",
-      },
-
-      body: JSON.stringify({
-        username,
-        password,
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
     });
 
     const data = await response.json();
@@ -71,12 +68,12 @@ loginForm.addEventListener("submit", async (event) => {
     }
 
     localStorage.setItem("aoAdminToken", data.token);
-
     showDashboard();
   } catch (error) {
     loginError.textContent = error.message || "Login failed.";
-
     loginError.hidden = false;
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalHTML;
   }
 });
 
@@ -906,7 +903,7 @@ function renderGreekFields(config = {}) {
           )}<td><button type="button" class="remove-greek-sweetness-btn">Remove</button></td></tr>`,
     )
     .join("");
-  productFields.innerHTML = `<h3>Greek yoghurt details</h3><div class="options-editor yoghurt-matrix-editor"><div class="options-heading"><strong>Sweetness, sizes, prices and stock</strong><div><button type="button" class="add-greek-sweetness-btn">Add sweetness</button><button type="button" class="add-greek-size-btn">Add size</button></div></div><div class="yoghurt-matrix-wrap"><table class="yoghurt-matrix"><thead><tr><th>Sweetness</th>${header}<th></th></tr></thead><tbody id="greek-matrix-body">${rows}</tbody></table></div></div>`;
+  productFields.innerHTML = `<h3>Greek yoghurt details</h3><div class="options-editor greek-matrix-editor"><div class="options-heading"><strong>Sweetness, sizes, prices and stock</strong><div><button type="button" class="add-greek-sweetness-btn">Add sweetness</button><button type="button" class="add-greek-size-btn">Add size</button></div></div><div class="yoghurt-matrix-wrap"><table class="yoghurt-matrix"><thead><tr><th>Sweetness</th>${header}<th></th></tr></thead><tbody id="greek-matrix-body">${rows}</tbody></table></div></div>`;
   productFields.querySelectorAll("#greek-matrix-body tr").forEach((row) => {
     const sweetness = row.dataset.greekSweetness;
     row.querySelectorAll("[data-sweetness-stock]").forEach((select) => {

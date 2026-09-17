@@ -1346,6 +1346,62 @@ select {
   gap: 8px;
   flex-wrap: wrap;
 }
+
+/* =========================
+   GREEK YOGHURT MATRIX EDITOR
+========================= */
+
+.greek-matrix-editor {
+  background: linear-gradient(135deg, #f0faf7, #f5f9ff);
+  border-color: var(--border);
+}
+.greek-matrix-editor .options-heading {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+.greek-matrix-editor .options-heading > div {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.add-greek-sweetness-btn,
+.add-greek-size-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--secondary);
+  border-radius: 8px;
+  background: #e6f7f8;
+  color: var(--secondary-deep);
+  font-size: 0.73rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    transform var(--transition);
+}
+.add-greek-sweetness-btn:hover,
+.add-greek-size-btn:hover {
+  background: #c8eef0;
+  transform: translateY(-1px);
+}
+.remove-greek-sweetness-btn {
+  padding: 7px 10px;
+  border: 1px solid #f0c8c8;
+  border-radius: 8px;
+  background: #fff5f5;
+  color: #a52727;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background var(--transition),
+    transform var(--transition);
+}
+.remove-greek-sweetness-btn:hover {
+  background: #ffe0e0;
+  transform: translateY(-1px);
+}
+
 .yoghurt-matrix-wrap {
   overflow-x: auto;
   border-radius: 10px;
@@ -1361,6 +1417,9 @@ select {
 .yoghurt-matrix thead tr {
   background: linear-gradient(90deg, var(--bg-panel-2), #f0f7ff);
   border-bottom: 2px solid var(--border);
+}
+.greek-matrix-editor .yoghurt-matrix thead tr {
+  background: linear-gradient(90deg, #eaf7f5, #f0f7ff);
 }
 .yoghurt-matrix thead th {
   padding: 10px 12px;
@@ -1389,6 +1448,9 @@ select {
 .yoghurt-matrix tbody tr:hover {
   background: #f5f9ff;
 }
+.greek-matrix-editor .yoghurt-matrix tbody tr:hover {
+  background: #f2faf8;
+}
 .yoghurt-matrix tbody td {
   padding: 10px 10px;
   vertical-align: middle;
@@ -1398,19 +1460,22 @@ select {
   padding: 8px;
 }
 
-/* Flavor label cell */
+/* Flavor / Sweetness label cell */
 .yoghurt-matrix tbody td:first-child input {
   font-weight: 700;
   color: var(--text-strong);
   border-color: var(--border);
 }
-.yoghurt-matrix td input[data-flavor-label] {
+.yoghurt-matrix td input[data-flavor-label],
+.yoghurt-matrix td input[data-sweetness-label] {
   min-width: 120px;
 }
 
-/* Price + stock per cell */
+/* Price + stock per cell — Fresh Yoghurt & Greek Yoghurt */
 .yoghurt-matrix td input[data-flavor-price],
-.yoghurt-matrix td select[data-flavor-stock] {
+.yoghurt-matrix td select[data-flavor-stock],
+.yoghurt-matrix td input[data-sweetness-price],
+.yoghurt-matrix td select[data-sweetness-stock] {
   display: block;
   width: 100%;
   min-width: 80px;
@@ -1425,19 +1490,49 @@ select {
     border-color var(--transition),
     box-shadow var(--transition);
 }
-.yoghurt-matrix td input[data-flavor-price] {
+.yoghurt-matrix td input[data-flavor-price],
+.yoghurt-matrix td input[data-sweetness-price] {
   margin-bottom: 5px;
 }
-.yoghurt-matrix td select[data-flavor-stock] {
+.yoghurt-matrix td select[data-flavor-stock],
+.yoghurt-matrix td select[data-sweetness-stock] {
   font-size: 0.73rem;
   background: var(--bg-panel-2);
   color: var(--text-dim);
 }
 .yoghurt-matrix td input[data-flavor-price]:focus,
-.yoghurt-matrix td select[data-flavor-stock]:focus {
+.yoghurt-matrix td select[data-flavor-stock]:focus,
+.yoghurt-matrix td input[data-sweetness-price]:focus,
+.yoghurt-matrix td select[data-sweetness-stock]:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.09);
+}
+
+/* =========================
+   LOGIN SPINNER
+========================= */
+
+.login-btn-spinner {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: loginSpin 0.65s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes loginSpin {
+  to { transform: rotate(360deg); }
+}
+
+.primary-btn:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 @media (max-width: 600px) {

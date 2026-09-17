@@ -1872,10 +1872,18 @@ async function submitOrder(event) {
     // -------------------------------------------------------
     // Step 2 — Open Paystack inline popup
     // -------------------------------------------------------
+    const nameParts = customerName.trim().split(/\s+/).filter(Boolean);
+    const firstName = nameParts[0] || customerName;
+    const lastName = nameParts.slice(1).join(" ") || firstName;
+
     const handler = PaystackPop.setup({
       key: initData.publicKey,
 
       email: initData.email,
+
+      firstName,
+      lastName,
+      phone: customerPhone,
 
       amount: initData.amountKobo,
 

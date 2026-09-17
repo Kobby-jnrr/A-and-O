@@ -892,7 +892,11 @@ function addOptionRow(group) {
       "beforeend",
       `<div class="option-row sweetness-row" data-option-group="sizes"><input data-size placeholder="Size" /><input data-sweetened type="number" min="0" step="0.01" placeholder="Sweetened price" /><input data-unsweetened type="number" min="0" step="0.01" placeholder="Unsweetened price" /><select data-option-status aria-label="Size stock status"><option value="available">In stock</option><option value="out_of_stock">Out of stock</option></select><button type="button" class="remove-option-btn">Remove</button></div>`,
     );
-  else container.insertAdjacentHTML("beforeend", optionRows({ "": "" }, group === "brukina-toppings" ? "toppings" : group));
+  else
+    container.insertAdjacentHTML(
+      "beforeend",
+      optionRows({ "": "" }, group === "brukina-toppings" ? "toppings" : group),
+    );
   container.lastElementChild
     .querySelector(".remove-option-btn")
     .addEventListener("click", (event) =>
@@ -915,8 +919,12 @@ function collectOptions(group, hasPrice = false) {
 }
 
 function collectStock(group, id) {
-  const row = [...document.querySelectorAll(`[data-option-group="${group}"]`)].find(
-    (candidate) => candidate.querySelector("[data-option-id], [data-size]")?.value.trim() === id,
+  const row = [
+    ...document.querySelectorAll(`[data-option-group="${group}"]`),
+  ].find(
+    (candidate) =>
+      candidate.querySelector("[data-option-id], [data-size]")?.value.trim() ===
+      id,
   );
   return row?.querySelector("[data-option-status]")?.value || "available";
 }
@@ -929,17 +937,23 @@ function collectConfigStock(type) {
       if (id) stock[group][id] = collectStock(group, id);
     });
   };
-  if (type === "brukina-custom") addGroup("toppings", Object.keys(collectOptions("toppings")));
+  if (type === "brukina-custom")
+    addGroup("toppings", Object.keys(collectOptions("toppings")));
   if (type === "flavor-size") {
     addGroup("flavors", Object.keys(collectOptions("flavors")));
     addGroup("sizes", Object.keys(collectOptions("sizes", true)));
   }
-  if (type === "parfait-custom") ["fruits", "toppings", "syrups"].forEach((group) => addGroup(group, Object.keys(collectOptions(group))));
+  if (type === "parfait-custom")
+    ["fruits", "toppings", "syrups"].forEach((group) =>
+      addGroup(group, Object.keys(collectOptions(group))),
+    );
   if (type === "size-sweetness") {
     stock.sizes = {};
     document.querySelectorAll(".sweetness-row").forEach((row) => {
       const id = row.querySelector("[data-size]").value.trim();
-      if (id) stock.sizes[id] = row.querySelector("[data-option-status]")?.value || "available";
+      if (id)
+        stock.sizes[id] =
+          row.querySelector("[data-option-status]")?.value || "available";
     });
   }
   return stock;

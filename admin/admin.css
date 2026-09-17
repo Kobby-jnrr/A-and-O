@@ -766,7 +766,9 @@ select {
   background: #fff;
   box-shadow: var(--shadow-sm);
   overflow: hidden;
-  transition: box-shadow var(--transition), transform var(--transition);
+  transition:
+    box-shadow var(--transition),
+    transform var(--transition);
 }
 
 .product-card:hover {
@@ -779,7 +781,11 @@ select {
   position: relative;
   height: 160px;
   overflow: hidden;
-  background: linear-gradient(135deg, rgba(47,111,237,.06), rgba(26,166,179,.04));
+  background: linear-gradient(
+    135deg,
+    rgba(47, 111, 237, 0.06),
+    rgba(26, 166, 179, 0.04)
+  );
   flex-shrink: 0;
 }
 
@@ -877,7 +883,10 @@ select {
   font-size: 0.72rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background var(--transition), border-color var(--transition), color var(--transition);
+  transition:
+    background var(--transition),
+    border-color var(--transition),
+    color var(--transition);
 }
 
 .availability-btn.selected {
@@ -906,7 +915,9 @@ select {
   font-weight: 700;
   font-size: 0.72rem;
   cursor: pointer;
-  transition: background var(--transition), transform var(--transition);
+  transition:
+    background var(--transition),
+    transform var(--transition);
 }
 
 .edit-product-btn:hover,

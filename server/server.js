@@ -379,7 +379,13 @@ app.post("/api/orders/init", async (req, res) => {
         const allowedToppings = product.toppings || {
           coconut_flakes: "Coconut Flakes",
         };
-        if (toppings.some((topping) => !allowedToppings[topping] || !optionIsAvailable(product, "toppings", topping))) {
+        if (
+          toppings.some(
+            (topping) =>
+              !allowedToppings[topping] ||
+              !optionIsAvailable(product, "toppings", topping),
+          )
+        ) {
           return res
             .status(400)
             .json({ message: "Invalid Brukina topping selected." });
@@ -401,11 +407,17 @@ app.post("/api/orders/init", async (req, res) => {
         const flavor = String(item.flavorId || "")
           .trim()
           .toLowerCase();
-        if (!product.sizes?.[size] || !optionIsAvailable(product, "sizes", size))
+        if (
+          !product.sizes?.[size] ||
+          !optionIsAvailable(product, "sizes", size)
+        )
           return res.status(400).json({
             message: "Please select a valid size for Fresh Yoghurt Drink.",
           });
-        if (!product.flavors?.[flavor] || !optionIsAvailable(product, "flavors", flavor))
+        if (
+          !product.flavors?.[flavor] ||
+          !optionIsAvailable(product, "flavors", flavor)
+        )
           return res.status(400).json({
             message: "Please select a valid flavor for Fresh Yoghurt Drink.",
           });
@@ -418,7 +430,10 @@ app.post("/api/orders/init", async (req, res) => {
         const sweetness = String(item.sweetnessId || "")
           .trim()
           .toLowerCase();
-        if (!product.prices?.[size] || !optionIsAvailable(product, "sizes", size))
+        if (
+          !product.prices?.[size] ||
+          !optionIsAvailable(product, "sizes", size)
+        )
           return res
             .status(400)
             .json({ message: "Please select a valid size for Greek Yoghurt." });
@@ -668,7 +683,13 @@ app.post("/api/orders", async (req, res) => {
         const allowedToppings = product.toppings || {
           coconut_flakes: "Coconut Flakes",
         };
-        if (toppings.some((topping) => !allowedToppings[topping] || !optionIsAvailable(product, "toppings", topping))) {
+        if (
+          toppings.some(
+            (topping) =>
+              !allowedToppings[topping] ||
+              !optionIsAvailable(product, "toppings", topping),
+          )
+        ) {
           return res
             .status(400)
             .json({ message: "Invalid Brukina topping selected." });
@@ -738,7 +759,10 @@ app.post("/api/orders", async (req, res) => {
         }
 
         for (const fruit of fruits) {
-          if (!allowedFruits.includes(fruit) || !optionIsAvailable(product, "fruits", fruit)) {
+          if (
+            !allowedFruits.includes(fruit) ||
+            !optionIsAvailable(product, "fruits", fruit)
+          ) {
             return res.status(400).json({
               message: "Invalid parfait fruit selected.",
             });
@@ -746,14 +770,20 @@ app.post("/api/orders", async (req, res) => {
         }
 
         for (const topping of toppings) {
-          if (!allowedToppings.includes(topping) || !optionIsAvailable(product, "toppings", topping)) {
+          if (
+            !allowedToppings.includes(topping) ||
+            !optionIsAvailable(product, "toppings", topping)
+          ) {
             return res.status(400).json({
               message: "Invalid parfait topping selected.",
             });
           }
         }
 
-        if (!allowedSyrups.includes(syrup) || !optionIsAvailable(product, "syrups", syrup)) {
+        if (
+          !allowedSyrups.includes(syrup) ||
+          !optionIsAvailable(product, "syrups", syrup)
+        ) {
           return res.status(400).json({
             message: "Invalid parfait syrup selected.",
           });
@@ -785,7 +815,10 @@ app.post("/api/orders", async (req, res) => {
           .trim()
           .toLowerCase();
 
-        if (!product.prices?.[size] || !optionIsAvailable(product, "sizes", size)) {
+        if (
+          !product.prices?.[size] ||
+          !optionIsAvailable(product, "sizes", size)
+        ) {
           return res.status(400).json({
             message: "Please select a valid size for Greek Yoghurt.",
           });

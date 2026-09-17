@@ -220,8 +220,11 @@ function optionIsAvailable(product, group, id) {
 }
 
 function firstAvailableOption(entries, product, group, preferred) {
-  if (preferred && optionIsAvailable(product, group, preferred)) return preferred;
-  return Object.keys(entries || {}).find((id) => optionIsAvailable(product, group, id));
+  if (preferred && optionIsAvailable(product, group, preferred))
+    return preferred;
+  return Object.keys(entries || {}).find((id) =>
+    optionIsAvailable(product, group, id),
+  );
 }
 
 function renderProducts() {
@@ -399,8 +402,17 @@ function renderCustomization(product) {
   }
 
   if (product.type === "flavor-size") {
-    const defaultSize = firstAvailableOption(product.sizes, product, "sizes", "500ml");
-    const defaultFlavor = firstAvailableOption(product.flavors, product, "flavors");
+    const defaultSize = firstAvailableOption(
+      product.sizes,
+      product,
+      "sizes",
+      "500ml",
+    );
+    const defaultFlavor = firstAvailableOption(
+      product.flavors,
+      product,
+      "flavors",
+    );
     return `
       <div class="customize-grid">
 
@@ -482,7 +494,12 @@ function renderCustomization(product) {
   }
 
   if (product.type === "parfait-custom") {
-    const defaultSyrup = firstAvailableOption(product.syrups, product, "syrups", "none");
+    const defaultSyrup = firstAvailableOption(
+      product.syrups,
+      product,
+      "syrups",
+      "none",
+    );
     return `
       <div class="customize-grid">
 
@@ -611,7 +628,12 @@ function renderCustomization(product) {
         ),
       ),
     ];
-    const defaultSize = firstAvailableOption(product.prices, product, "sizes", "1l");
+    const defaultSize = firstAvailableOption(
+      product.prices,
+      product,
+      "sizes",
+      "1l",
+    );
     const defaultSweetness = sweetnesses.includes("sweetened")
       ? "sweetened"
       : sweetnesses[0];

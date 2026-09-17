@@ -44,6 +44,13 @@ function optionIsAvailable(product, group, id) {
   return product?.stock?.[group]?.[id] !== "out_of_stock";
 }
 
+function flavorSizeIsAvailable(product, flavorId, sizeId) {
+  return (
+    product?.stock?.flavors?.[flavorId]?.[sizeId] !== "out_of_stock" &&
+    product?.stock?.sizes?.[sizeId] !== "out_of_stock"
+  );
+}
+
 function validateProductInput(input, { requireId = false } = {}) {
   const product = input || {};
   const result = {};
@@ -92,6 +99,32 @@ function validateProductInput(input, { requireId = false } = {}) {
     throw new Error("Product configuration must be an object.");
 
   return result;
+}
+
+function productIdBase(name) {
+  return (
+    String(name || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 40) || "product"
+  );
+}
+
+async function createProductId(name) {
+  const base = productIdBase(name);
+  let candidate = base;
+  let suffix = 2;
+  while (true) {
+    const result = await db.query(
+      "SELECT 1 FROM products WHERE id = $1 LIMIT 1",
+      [candidate],
+    );
+    if (!result.rowCount) return candidate;
+    candidate = `${base}-${suffix}`;
+    suffix += 1;
+  }
 }
 
 // ============================================================
@@ -375,20 +408,18 @@ app.post("/api/orders/init", async (req, res) => {
       let description = "";
 
       if (product.type === "brukina-custom") {
-        const toppings = Array.isArray(item.toppings) ? item.toppings : [];
-        const allowedToppings = product.toppings || {
-          coconut_flakes: "Coconut Flakes",
+        const optionId = String(item.optionId || "").trim();
+        const allowedOptions = product.options || {
+          millet: "Millet",
+          millet_coconut_flakes: "Millet and Coconut Flakes",
         };
         if (
-          toppings.some(
-            (topping) =>
-              !allowedToppings[topping] ||
-              !optionIsAvailable(product, "toppings", topping),
-          )
+          !allowedOptions[optionId] ||
+          !optionIsAvailable(product, "options", optionId)
         ) {
           return res
             .status(400)
-            .json({ message: "Invalid Brukina topping selected." });
+            .json({ message: "Please select a valid Brukina option." });
         }
 
         const groundnutSelected = !!item.groundnut;
@@ -396,10 +427,7 @@ app.post("/api/orders/init", async (req, res) => {
         unitPrice = Number(product.price) + (groundnutSelected ? 2 : 0);
 
         description = [];
-        if (toppings.length)
-          description.push(
-            `Toppings: ${toppings.map((t) => allowedToppings[t]).join(", ")}`,
-          );
+        description.push(`Option: ${allowedOptions[optionId]}`);
         if (groundnutSelected) description.push("Groundnut");
         description = description.join("; ") || "Standard";
       } else if (product.type === "flavor-size") {
@@ -407,9 +435,11 @@ app.post("/api/orders/init", async (req, res) => {
         const flavor = String(item.flavorId || "")
           .trim()
           .toLowerCase();
+        const prices = product.flavorPrices?.[flavor] || product.sizes;
         if (
-          !product.sizes?.[size] ||
-          !optionIsAvailable(product, "sizes", size)
+          !prices?.[size] ||
+          !optionIsAvailable(product, "flavors", flavor) ||
+          !flavorSizeIsAvailable(product, flavor, size)
         )
           return res.status(400).json({
             message: "Please select a valid size for Fresh Yoghurt Drink.",
@@ -421,7 +451,7 @@ app.post("/api/orders/init", async (req, res) => {
           return res.status(400).json({
             message: "Please select a valid flavor for Fresh Yoghurt Drink.",
           });
-        unitPrice = product.sizes[size];
+        unitPrice = prices[size];
         description = `${flavor.charAt(0).toUpperCase() + flavor.slice(1)} - ${size}`;
       } else if (product.type === "parfait-custom") {
         unitPrice = product.price;
@@ -679,20 +709,18 @@ app.post("/api/orders", async (req, res) => {
       // ------------------------------------------------------
 
       if (product.type === "brukina-custom") {
-        const toppings = Array.isArray(item.toppings) ? item.toppings : [];
-        const allowedToppings = product.toppings || {
-          coconut_flakes: "Coconut Flakes",
+        const optionId = String(item.optionId || "").trim();
+        const allowedOptions = product.options || {
+          millet: "Millet",
+          millet_coconut_flakes: "Millet and Coconut Flakes",
         };
         if (
-          toppings.some(
-            (topping) =>
-              !allowedToppings[topping] ||
-              !optionIsAvailable(product, "toppings", topping),
-          )
+          !allowedOptions[optionId] ||
+          !optionIsAvailable(product, "options", optionId)
         ) {
           return res
             .status(400)
-            .json({ message: "Invalid Brukina topping selected." });
+            .json({ message: "Please select a valid Brukina option." });
         }
 
         const groundnutSelected = !!item.groundnut;
@@ -700,12 +728,9 @@ app.post("/api/orders", async (req, res) => {
         unitPrice = Number(product.price) + (groundnutSelected ? 2 : 0);
 
         description = [];
-        if (toppings.length)
-          description.push(
-            `Toppings: ${toppings.map((t) => allowedToppings[t]).join(", ")}`,
-          );
+        description.push(`Option: ${allowedOptions[optionId]}`);
         if (groundnutSelected) description.push("Groundnut");
-        description = description.join("; ") || "Standard";
+        description = description.join("; ");
       }
 
       // ------------------------------------------------------
@@ -716,8 +741,13 @@ app.post("/api/orders", async (req, res) => {
         const flavor = String(item.flavorId || "")
           .trim()
           .toLowerCase();
+        const prices = product.flavorPrices?.[flavor] || product.sizes;
 
-        if (!product.sizes?.[size]) {
+        if (
+          !prices?.[size] ||
+          !optionIsAvailable(product, "flavors", flavor) ||
+          !flavorSizeIsAvailable(product, flavor, size)
+        ) {
           return res.status(400).json({
             message: "Please select a valid size for Fresh Yoghurt Drink.",
           });
@@ -729,7 +759,7 @@ app.post("/api/orders", async (req, res) => {
           });
         }
 
-        unitPrice = product.sizes[size];
+        unitPrice = prices[size];
 
         const displayFlavor = flavor.charAt(0).toUpperCase() + flavor.slice(1);
 
@@ -1148,17 +1178,18 @@ app.get("/api/admin/products", authenticateToken, async (req, res) => {
 
 app.post("/api/admin/products", authenticateToken, async (req, res) => {
   try {
-    const product = validateProductInput(req.body, { requireId: true });
+    const product = validateProductInput(req.body);
     if (!product.name || !product.type || !product.config) {
       return res.status(400).json({
-        message: "Product ID, name, type, and configuration are required.",
+        message: "Product name, type, and configuration are required.",
       });
     }
+    const productId = await createProductId(product.name);
     const result = await db.query(
       `INSERT INTO products (id, name, category, type, config, image_url, description, status, sort_order)
        VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9) RETURNING *`,
       [
-        product.id,
+        productId,
         String(product.name).trim(),
         String(product.category || "Beverage").trim(),
         product.type,

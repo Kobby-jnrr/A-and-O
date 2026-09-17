@@ -79,7 +79,11 @@ function getProductUnitPrice(product, options = {}) {
   }
 
   if (product.type === "flavor-size") {
-    return product.sizes[options.sizeId] || 0;
+    return (
+      product.flavorPrices?.[options.flavorId]?.[options.sizeId] ??
+      product.sizes?.[options.sizeId] ??
+      0
+    );
   }
 
   if (product.type === "parfait-custom") {
@@ -103,11 +107,9 @@ function getCartItemDescription(product, options = {}) {
   }
 
   if (product.type === "brukina-custom") {
-    const toppingNames = (options.toppings || [])
-      .map((id) => product.toppings?.[id])
-      .filter(Boolean);
+    const optionName = product.options?.[options.optionId];
     const parts = [];
-    if (toppingNames.length) parts.push(`Toppings: ${toppingNames.join(", ")}`);
+    if (optionName) parts.push(`Option: ${optionName}`);
     if (options.groundnut) parts.push("Groundnut");
     return parts.length ? parts.join("; ") : "Standard";
   }
@@ -250,7 +252,12 @@ function renderProduct(product) {
   }
 
   if (product.type === "flavor-size") {
-    startingPrice = Math.min(...Object.values(product.sizes));
+    startingPrice = Math.min(
+      ...Object.values(product.flavorPrices || product.sizes).flatMap(
+        (prices) =>
+          typeof prices === "object" ? Object.values(prices) : [prices],
+      ),
+    );
   }
 
   if (product.type === "parfait-custom") {
@@ -340,20 +347,27 @@ function renderProduct(product) {
 
 function renderCustomization(product) {
   if (product.type === "brukina-custom") {
-    const toppings = product.toppings || { coconut_flakes: "Coconut Flakes" };
+    const options = product.options || {
+      millet: "Millet",
+      millet_coconut_flakes: "Millet and Coconut Flakes",
+    };
+    const defaultOption =
+      Object.keys(options).find((id) =>
+        optionIsAvailable(product, "options", id),
+      ) || Object.keys(options)[0];
     return `
       <div class="customize-grid">
 
         <div class="customize-field">
 
-          <label>Toppings</label>
+          <label>Options</label>
 
           <div class="option-list">
 
-            ${Object.entries(toppings)
+            ${Object.entries(options)
               .map(
                 ([id, label]) =>
-                  `<button type="button" class="option-button brukina-topping-option${optionIsAvailable(product, "toppings", id) ? "" : " option-unavailable"}" data-brukina-topping="${escapeHtml(id)}" aria-pressed="false"${optionIsAvailable(product, "toppings", id) ? "" : ' disabled aria-disabled="true"'}>${escapeHtml(label)}${optionIsAvailable(product, "toppings", id) ? "" : " (Out of stock)"}</button>`,
+                  `<button type="button" class="option-button brukina-option${id === defaultOption ? " active" : ""}${optionIsAvailable(product, "options", id) ? "" : " option-unavailable"}" data-brukina-option="${escapeHtml(id)}" aria-pressed="${id === defaultOption}"${optionIsAvailable(product, "options", id) ? "" : ' disabled aria-disabled="true"'}>${escapeHtml(label)}${optionIsAvailable(product, "options", id) ? "" : " (Out of stock)"}</button>`,
               )
               .join("")}
 
@@ -402,17 +416,25 @@ function renderCustomization(product) {
   }
 
   if (product.type === "flavor-size") {
-    const defaultSize = firstAvailableOption(
-      product.sizes,
-      product,
-      "sizes",
-      "500ml",
-    );
-    const defaultFlavor = firstAvailableOption(
-      product.flavors,
-      product,
-      "flavors",
-    );
+    const flavorIds = Object.keys(product.flavors || {});
+    const hasAvailableSize = (flavorId, sizeId) =>
+      (product.flavorPrices?.[flavorId]?.[sizeId] ??
+        product.sizes?.[sizeId]) !== undefined &&
+      optionIsAvailable(product, "flavors", flavorId) &&
+      product.stock?.flavors?.[flavorId]?.[sizeId] !== "out_of_stock" &&
+      product.stock?.sizes?.[sizeId] !== "out_of_stock";
+    const defaultFlavor =
+      flavorIds.find((flavorId) =>
+        Object.keys(
+          product.flavorPrices?.[flavorId] || product.sizes || {},
+        ).some((sizeId) => hasAvailableSize(flavorId, sizeId)),
+      ) || flavorIds[0];
+    const availableSizes = Object.keys(
+      product.flavorPrices?.[defaultFlavor] || product.sizes || {},
+    ).filter((sizeId) => hasAvailableSize(defaultFlavor, sizeId));
+    const defaultSize = availableSizes.includes("500ml")
+      ? "500ml"
+      : availableSizes[0];
     return `
       <div class="customize-grid">
 
@@ -457,10 +479,10 @@ function renderCustomization(product) {
                 ([id, price]) => `
                   <button
                     type="button"
-                    class="option-button size-option ${id === defaultSize ? "active" : ""}${optionIsAvailable(product, "sizes", id) ? "" : " option-unavailable"}"
+                    class="option-button size-option ${id === defaultSize ? "active" : ""}${hasAvailableSize(defaultFlavor, id) ? "" : " option-unavailable"}"
                     data-size-id="${escapeHtml(id)}"
                     aria-pressed="${id === defaultSize ? "true" : "false"}"
-                    ${optionIsAvailable(product, "sizes", id) ? "" : 'disabled aria-disabled="true"'}
+                    ${hasAvailableSize(defaultFlavor, id) ? "" : 'disabled aria-disabled="true"'}
                   >
                     ${escapeHtml(formatOptionLabel(id))}${optionIsAvailable(product, "sizes", id) ? "" : " (Out of stock)"}
                   </button>
@@ -474,7 +496,7 @@ function renderCustomization(product) {
 
         <div class="customize-field">
           <label>Price</label>
-          <div class="product-price" data-custom-price="${escapeHtml(product.id)}">${formatMoney(product.sizes?.[defaultSize])}</div>
+          <div class="product-price" data-custom-price="${escapeHtml(product.id)}">${formatMoney(product.flavorPrices?.[defaultFlavor]?.[defaultSize] ?? product.sizes?.[defaultSize])}</div>
         </div>
 
       </div>
@@ -704,8 +726,9 @@ function updateCustomizationPrice(box) {
 
   let price = 0;
   if (product.type === "flavor-size") {
+    const flavor = box.querySelector(".flavor-option.active")?.dataset.flavorId;
     const size = box.querySelector(".size-option.active")?.dataset.sizeId;
-    price = product.sizes?.[size];
+    price = product.flavorPrices?.[flavor]?.[size] ?? product.sizes?.[size];
   } else if (product.type === "size-sweetness") {
     const size = box.querySelector(".greek-size-option.active")?.dataset
       .greekSize;
@@ -762,15 +785,16 @@ function initializeProductInteractions() {
      BRUKINA OPTION
   --------------------------------------------------------- */
 
-  $$(".brukina-topping-option").forEach((button) => {
+  $$(".brukina-option").forEach((button) => {
     button.addEventListener("click", () => {
-      button.classList.toggle("active");
-      button.setAttribute(
-        "aria-pressed",
-        button.classList.contains("active") ? "true" : "false",
-      );
-      // update price when toppings change
       const box = button.closest(".customize-box");
+      box?.querySelectorAll(".brukina-option").forEach((option) => {
+        option.classList.toggle("active", option === button);
+        option.setAttribute(
+          "aria-pressed",
+          option === button ? "true" : "false",
+        );
+      });
       if (box) updateCustomizationPrice(box);
     });
   });
@@ -806,6 +830,31 @@ function initializeProductInteractions() {
 
       button.classList.add("active");
       button.setAttribute("aria-pressed", "true");
+      const product = PRODUCTS[box.closest(".product-row")?.dataset.productId];
+      const flavorId = button.dataset.flavorId;
+      const availableSizes = Object.keys(
+        product?.flavorPrices?.[flavorId] || product?.sizes || {},
+      ).filter(
+        (sizeId) =>
+          product?.stock?.flavors?.[flavorId]?.[sizeId] !== "out_of_stock" &&
+          product?.stock?.sizes?.[sizeId] !== "out_of_stock",
+      );
+      const preferredSize = availableSizes.includes("500ml")
+        ? "500ml"
+        : availableSizes[0];
+      box.querySelectorAll(".size-option").forEach((sizeOption) => {
+        const available = availableSizes.includes(sizeOption.dataset.sizeId);
+        sizeOption.disabled = !available;
+        sizeOption.classList.toggle("option-unavailable", !available);
+        sizeOption.classList.toggle(
+          "active",
+          sizeOption.dataset.sizeId === preferredSize,
+        );
+        sizeOption.setAttribute(
+          "aria-pressed",
+          sizeOption.dataset.sizeId === preferredSize ? "true" : "false",
+        );
+      });
       updateCustomizationPrice(box);
     });
   });
@@ -970,7 +1019,6 @@ function addCustomizedProduct(productId) {
   }
 
   const options = {
-    includeCoconut: false,
     flavorId: "plain",
     sizeId: null,
     fruits: [],
@@ -984,10 +1032,9 @@ function addCustomizedProduct(productId) {
   --------------------------------------------------------- */
 
   if (product.type === "brukina-custom") {
-    options.toppings = [
-      ...box.querySelectorAll(".brukina-topping-option.active"),
-    ].map((button) => button.dataset.brukinaTopping);
-    options.includeCoconut = options.toppings.includes("coconut_flakes");
+    options.optionId = box.querySelector(
+      ".brukina-option.active",
+    )?.dataset.brukinaOption;
     options.groundnut = !!box.querySelector(".brukina-groundnut-option.active");
   }
 
@@ -1663,7 +1710,7 @@ async function submitOrder(event) {
         items: cart.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
-          includeCoconut: item.options?.includeCoconut || false,
+          optionId: item.options?.optionId || null,
           flavorId: item.options?.flavorId || null,
           sizeId: item.options?.sizeId || null,
           fruits: item.options?.fruits || [],
@@ -1808,7 +1855,7 @@ async function submitOrder(event) {
           items: cart.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
-            includeCoconut: item.options?.includeCoconut || false,
+            optionId: item.options?.optionId || null,
             flavorId: item.options?.flavorId || null,
             sizeId: item.options?.sizeId || null,
             fruits: item.options?.fruits || [],

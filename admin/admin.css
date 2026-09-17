@@ -996,6 +996,10 @@ select {
   margin-top: 2px;
 }
 
+/* =========================
+   PRODUCT MODAL
+========================= */
+
 .product-modal {
   position: fixed;
   inset: 0;
@@ -1010,75 +1014,169 @@ select {
 .product-modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(9, 27, 53, 0.55);
+  background: rgba(9, 27, 53, 0.6);
+  backdrop-filter: blur(4px);
 }
 .product-modal-card {
   position: relative;
   z-index: 1;
-  width: min(700px, 100%);
-  max-height: calc(100vh - 40px);
-  overflow: auto;
-  padding: 28px;
-  border-radius: 18px;
-  background: #fff;
-  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.25);
+  width: min(740px, 100%);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  border-radius: 22px;
+  background: #ffffff;
+  box-shadow:
+    0 30px 80px rgba(9, 27, 53, 0.28),
+    0 0 0 1px rgba(201, 221, 244, 0.6);
 }
-.product-modal-card h2 {
-  margin: 8px 0;
+
+/* ── Modal header band ── */
+.product-modal-card > .eyebrow,
+.product-modal-card > h2,
+.product-modal-card > .product-form-help {
+  padding-left: 30px;
+  padding-right: 52px; /* room for close btn */
 }
-.product-form-help {
+.product-modal-card > .eyebrow {
+  display: block;
+  padding-top: 28px;
+  padding-bottom: 0;
+}
+.product-modal-card > h2 {
+  margin: 6px 0 0;
+  font-size: clamp(22px, 3vw, 28px);
+  line-height: 1.1;
+  color: var(--text-strong);
+}
+.product-modal-card > .product-form-help {
+  display: block;
+  margin: 6px 0 0;
   color: var(--text-dim);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-soft);
 }
 .modal-close {
   position: absolute;
-  top: 14px;
-  right: 16px;
-  border: 0;
-  background: transparent;
-  font-size: 28px;
+  top: 18px;
+  right: 20px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: #f3f7fc;
   color: var(--text-dim);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    color var(--transition),
+    border-color var(--transition);
 }
+.modal-close:hover {
+  background: #ffe4e4;
+  border-color: #f0c8c8;
+  color: #a52727;
+}
+
+/* =========================
+   PRODUCT FORM
+========================= */
+
 .product-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  margin-top: 20px;
+  gap: 16px;
+  padding: 24px 30px 30px;
 }
 .product-form label {
   display: grid;
   gap: 6px;
-  color: var(--text-dim);
-  font-size: 0.8rem;
+  color: var(--text-strong);
+  font-size: 0.78rem;
   font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
 }
 .product-form input,
 .product-form select,
 .product-form textarea {
   width: 100%;
-  padding: 10px;
+  padding: 10px 12px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: 10px;
+  background: var(--bg-panel-2);
+  color: var(--text-strong);
   font: inherit;
+  font-size: 0.88rem;
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition),
+    background var(--transition);
+}
+.product-form input:focus,
+.product-form select:focus,
+.product-form textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.1);
+}
+.product-form input:hover,
+.product-form select:hover,
+.product-form textarea:hover {
+  background: #fff;
+  border-color: var(--accent-soft);
 }
 .product-form textarea {
   resize: vertical;
+  min-height: 70px;
 }
 .product-form .full-width,
 .product-form .error-message,
 .product-form .primary-btn {
   grid-column: 1 / -1;
 }
+.product-form-help {
+  color: var(--text-dim);
+  font-size: 0.82rem;
+}
+
+/* =========================
+   PRODUCT FIELDS (dynamic)
+========================= */
+
 .product-fields {
   display: grid;
   gap: 14px;
 }
+.product-fields h3 {
+  margin: 0 0 2px;
+  color: var(--text-strong);
+  font-size: 1rem;
+  font-family: "Newsreader", Georgia, serif;
+}
+.product-fields > label {
+  max-width: 260px;
+}
+
+/* =========================
+   TYPE PICKER
+========================= */
+
 .tap-picker {
   display: grid;
   gap: 8px;
-  color: var(--text-dim);
-  font-size: 0.8rem;
+  color: var(--text-strong);
+  font-size: 0.78rem;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
 }
 .tap-options {
   display: flex;
@@ -1086,14 +1184,23 @@ select {
   gap: 8px;
 }
 .tap-options button {
-  padding: 9px 12px;
+  padding: 9px 14px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: 10px;
   background: #fff;
   color: var(--text-dim);
   font: inherit;
-  font-size: 0.77rem;
+  font-size: 0.78rem;
   font-weight: 700;
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    border-color var(--transition),
+    color var(--transition);
+}
+.tap-options button:hover:not(.selected):not(:disabled) {
+  background: var(--bg-panel-2);
+  border-color: var(--accent-soft);
 }
 .tap-options button.selected {
   border-color: var(--accent);
@@ -1105,12 +1212,17 @@ select {
   cursor: default;
   opacity: 0.6;
 }
+
+/* =========================
+   IMAGE PREVIEW
+========================= */
+
 .admin-image-preview {
-  height: 92px;
+  height: 100px;
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #f3f7fc;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #eaf2ff, #e8f8fa);
 }
 .admin-image-preview img {
   display: block;
@@ -1118,43 +1230,54 @@ select {
   height: 100%;
   object-fit: cover;
 }
-.product-fields h3 {
-  margin: 0;
-  color: var(--text-strong);
-  font-size: 1rem;
-}
-.product-fields > label {
-  max-width: 260px;
-}
+
+/* =========================
+   OPTIONS EDITOR (generic)
+========================= */
+
 .options-editor {
-  padding: 15px;
+  padding: 16px;
   border: 1px solid var(--border-soft);
-  border-radius: 12px;
-  background: #f9fcff;
+  border-radius: 14px;
+  background: #f7fbff;
 }
 .options-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   color: var(--text-strong);
   font-size: 0.85rem;
+  font-weight: 700;
 }
-.add-option-btn {
-  padding: 7px 10px;
+.add-option-btn,
+.add-yogurt-flavor-btn,
+.add-yogurt-size-btn {
+  padding: 6px 12px;
   border: 1px solid var(--accent);
   border-radius: 8px;
-  background: #fff;
+  background: #eaf2ff;
   color: var(--accent-deep);
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.73rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    transform var(--transition);
+}
+.add-option-btn:hover,
+.add-yogurt-flavor-btn:hover,
+.add-yogurt-size-btn:hover {
+  background: #d5e8fd;
+  transform: translateY(-1px);
 }
 .option-row {
   display: grid;
   grid-template-columns: 1fr 1.4fr 1fr 1fr auto;
   gap: 8px;
   margin-top: 8px;
+  align-items: center;
 }
 .option-row:not(:has([data-option-price])) {
   grid-template-columns: 1fr 1.4fr 1fr auto;
@@ -1162,22 +1285,174 @@ select {
 .sweetness-row {
   grid-template-columns: 1fr 1fr 1fr 1fr auto;
 }
-.remove-option-btn {
-  padding: 7px 9px;
+.option-row input,
+.option-row select,
+.sweetness-row input,
+.sweetness-row select {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--text-strong);
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition);
+}
+.option-row input:focus,
+.option-row select:focus,
+.sweetness-row input:focus,
+.sweetness-row select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.08);
+}
+.remove-option-btn,
+.remove-yogurt-flavor-btn {
+  padding: 7px 10px;
   border: 1px solid #f0c8c8;
   border-radius: 8px;
   background: #fff5f5;
   color: #a52727;
   font-size: 0.72rem;
   font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background var(--transition),
+    transform var(--transition);
+}
+.remove-option-btn:hover,
+.remove-yogurt-flavor-btn:hover {
+  background: #ffe0e0;
+  transform: translateY(-1px);
+}
+
+/* =========================
+   YOGHURT MATRIX EDITOR
+========================= */
+
+.yoghurt-matrix-editor {
+  background: linear-gradient(135deg, #f0f7ff, #f5fffe);
+  border-color: var(--border);
+}
+.yoghurt-matrix-editor .options-heading {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+.yoghurt-matrix-editor .options-heading > div {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.yoghurt-matrix-wrap {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border-soft);
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(29, 74, 125, 0.05);
+}
+.yoghurt-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.yoghurt-matrix thead tr {
+  background: linear-gradient(90deg, var(--bg-panel-2), #f0f7ff);
+  border-bottom: 2px solid var(--border);
+}
+.yoghurt-matrix thead th {
+  padding: 10px 12px;
+  color: var(--text-strong);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  text-align: left;
+}
+.yoghurt-matrix thead th:first-child {
+  min-width: 140px;
+}
+.yoghurt-matrix thead th:last-child {
+  width: 70px;
+  text-align: center;
+}
+.yoghurt-matrix tbody tr {
+  border-bottom: 1px solid var(--border-soft);
+  transition: background var(--transition);
+}
+.yoghurt-matrix tbody tr:last-child {
+  border-bottom: 0;
+}
+.yoghurt-matrix tbody tr:hover {
+  background: #f5f9ff;
+}
+.yoghurt-matrix tbody td {
+  padding: 10px 10px;
+  vertical-align: middle;
+}
+.yoghurt-matrix tbody td:last-child {
+  text-align: center;
+  padding: 8px;
+}
+
+/* Flavor label cell */
+.yoghurt-matrix tbody td:first-child input {
+  font-weight: 700;
+  color: var(--text-strong);
+  border-color: var(--border);
+}
+.yoghurt-matrix td input[data-flavor-label] {
+  min-width: 120px;
+}
+
+/* Price + stock per cell */
+.yoghurt-matrix td input[data-flavor-price],
+.yoghurt-matrix td select[data-flavor-stock] {
+  display: block;
+  width: 100%;
+  min-width: 80px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--text-strong);
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition);
+}
+.yoghurt-matrix td input[data-flavor-price] {
+  margin-bottom: 5px;
+}
+.yoghurt-matrix td select[data-flavor-stock] {
+  font-size: 0.73rem;
+  background: var(--bg-panel-2);
+  color: var(--text-dim);
+}
+.yoghurt-matrix td input[data-flavor-price]:focus,
+.yoghurt-matrix td select[data-flavor-stock]:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.09);
 }
 
 @media (max-width: 600px) {
   .products-section {
     padding: 20px;
   }
+  .product-modal-card > .eyebrow,
+  .product-modal-card > h2,
+  .product-modal-card > .product-form-help {
+    padding-left: 20px;
+    padding-right: 48px;
+  }
   .product-form {
     grid-template-columns: 1fr;
+    padding: 18px 20px 24px;
   }
   .product-form .full-width,
   .product-form .error-message,

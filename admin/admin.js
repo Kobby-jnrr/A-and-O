@@ -844,9 +844,9 @@ function applyOptionStockStatuses(config = {}) {
 
 function renderProductFields(type, config = {}) {
   if (type === "brukina-custom") {
-    productFields.innerHTML = `<h3>Brukina details</h3><label>Price (GHS)<input id="basePrice" type="number" min="0" step="0.01" value="${escapeHtml(config.price ?? 20)}" required /></label><div class="options-editor"><div class="options-heading"><strong>Toppings</strong><button type="button" class="add-option-btn" data-group="brukina-toppings">Add topping</button></div><div id="brukina-toppings">${optionRows(config.toppings || { coconut_flakes: "Coconut Flakes" }, "toppings")}</div></div>`;
+    productFields.innerHTML = `<h3>Brukina details</h3><label>Price (GHS)<input id="basePrice" type="number" min="0" step="0.01" value="${escapeHtml(config.price ?? 20)}" required /></label><div class="options-editor"><div class="options-heading"><strong>Options</strong><button type="button" class="add-option-btn" data-group="brukina-options">Add option</button></div><div id="brukina-options">${optionRows(config.options || { millet: "Millet", millet_coconut_flakes: "Millet and Coconut Flakes" }, "options")}</div></div>`;
   } else if (type === "flavor-size") {
-    productFields.innerHTML = `<h3>Yoghurt details</h3><div class="options-editor"><div class="options-heading"><strong>Flavors</strong><button type="button" class="add-option-btn" data-group="flavors">Add flavor</button></div><div id="flavors">${optionRows(config.flavors || { plain: "Plain" }, "flavors")}</div></div><div class="options-editor"><div class="options-heading"><strong>Sizes and prices</strong><button type="button" class="add-option-btn" data-group="sizes">Add size</button></div><div id="sizes">${optionRows(config.sizes || { "500ml": 25 }, "sizes", true)}</div></div>`;
+    renderYoghurtFields(config);
   } else if (type === "parfait-custom") {
     productFields.innerHTML = `<h3>Parfait details</h3><label>Base price (GHS)<input id="basePrice" type="number" min="0" step="0.01" value="${escapeHtml(config.price ?? 40)}" required /></label>${["fruits", "toppings", "syrups"].map((group) => `<div class="options-editor"><div class="options-heading"><strong>${group[0].toUpperCase() + group.slice(1)}</strong><button type="button" class="add-option-btn" data-group="${group}">Add ${group.slice(0, -1)}</button></div><div id="${group}">${optionRows(config[group] || (group === "syrups" ? { none: "No Syrup" } : {}), group)}</div></div>`).join("")}`;
   } else {
@@ -879,6 +879,92 @@ function renderProductFields(type, config = {}) {
   applyOptionStockStatuses(config);
 }
 
+function renderYoghurtFields(config = {}) {
+  const sizes = config.sizes || { "500ml": 25 };
+  const flavors = config.flavors || { plain: "Plain" };
+  const flavorPrices =
+    config.flavorPrices ||
+    Object.fromEntries(
+      Object.keys(flavors).map((flavorId) => [
+        flavorId,
+        Object.fromEntries(
+          Object.entries(sizes).map(([sizeId, price]) => [sizeId, price]),
+        ),
+      ]),
+    );
+  const sizeIds = Object.keys(sizes);
+  const header = sizeIds
+    .map((sizeId) => `<th>${escapeHtml(formatOptionLabel(sizeId))}</th>`)
+    .join("");
+  const rows = Object.entries(flavors)
+    .map(
+      ([flavorId, label]) =>
+        `<tr data-yogurt-flavor="${escapeHtml(flavorId)}"><td><input data-flavor-label value="${escapeHtml(label)}" placeholder="Flavor name" /></td>${sizeIds
+          .map(
+            (sizeId) =>
+              `<td><input data-flavor-price data-size="${escapeHtml(sizeId)}" type="number" min="0" step="0.01" value="${escapeHtml(flavorPrices[flavorId]?.[sizeId] ?? "")}" placeholder="Price" /><select data-flavor-stock data-size="${escapeHtml(sizeId)}" aria-label="${escapeHtml(label)} ${escapeHtml(sizeId)} stock"><option value="available">In stock</option><option value="out_of_stock">Out of stock</option></select></td>`,
+          )
+          .join(
+            "",
+          )}<td><button type="button" class="remove-yogurt-flavor-btn">Remove</button></td></tr>`,
+    )
+    .join("");
+  productFields.innerHTML = `<h3>Yoghurt details</h3><div class="options-editor yoghurt-matrix-editor"><div class="options-heading"><strong>Flavors, sizes, prices and stock</strong><div><button type="button" class="add-yogurt-flavor-btn">Add flavor</button><button type="button" class="add-yogurt-size-btn">Add size</button></div></div><div class="yoghurt-matrix-wrap"><table class="yoghurt-matrix"><thead><tr><th>Flavor</th>${header}<th></th></tr></thead><tbody id="yoghurt-matrix-body">${rows}</tbody></table></div></div>`;
+  productFields.querySelectorAll("#yoghurt-matrix-body tr").forEach((row) => {
+    const flavorId = row.dataset.yogurtFlavor;
+    row.querySelectorAll("[data-flavor-stock]").forEach((select) => {
+      const sizeId = select.dataset.size;
+      select.value =
+        config.stock?.flavors?.[flavorId]?.[sizeId] ||
+        (config.stock?.flavors?.[flavorId] === "out_of_stock" ||
+        config.stock?.sizes?.[sizeId] === "out_of_stock"
+          ? "out_of_stock"
+          : "available");
+    });
+  });
+  productFields
+    .querySelector(".add-yogurt-flavor-btn")
+    .addEventListener("click", () => addYoghurtFlavor());
+  productFields
+    .querySelector(".add-yogurt-size-btn")
+    .addEventListener("click", () => addYoghurtSize());
+  productFields
+    .querySelectorAll(".remove-yogurt-flavor-btn")
+    .forEach((button) =>
+      button.addEventListener("click", () => button.closest("tr").remove()),
+    );
+}
+
+function addYoghurtFlavor() {
+  const body = document.getElementById("yoghurt-matrix-body");
+  const sizeIds = [
+    ...body.querySelectorAll("tr:first-child [data-flavor-price]"),
+  ].map((input) => input.dataset.size);
+  const flavorId = `flavor_${body.children.length + 1}`;
+  const row = document.createElement("tr");
+  row.dataset.yogurtFlavor = flavorId;
+  row.innerHTML = `<td><input data-flavor-label value="" placeholder="Flavor name" /></td>${sizeIds.map((sizeId) => `<td><input data-flavor-price data-size="${escapeHtml(sizeId)}" type="number" min="0" step="0.01" placeholder="Price" /><select data-flavor-stock data-size="${escapeHtml(sizeId)}" aria-label="${escapeHtml(sizeId)} stock"><option value="available">In stock</option><option value="out_of_stock">Out of stock</option></select></td>`).join("")}<td><button type="button" class="remove-yogurt-flavor-btn">Remove</button></td>`;
+  body.appendChild(row);
+  row
+    .querySelector(".remove-yogurt-flavor-btn")
+    .addEventListener("click", () => row.remove());
+}
+
+function addYoghurtSize() {
+  const headerRow = productFields.querySelector(".yoghurt-matrix thead tr");
+  const sizeId = window.prompt("Enter the new size, for example 250ml:");
+  if (!sizeId?.trim()) return;
+  const normalizedSize = sizeId.trim();
+  const headerCell = document.createElement("th");
+  headerCell.textContent = formatOptionLabel(normalizedSize);
+  headerRow.insertBefore(headerCell, headerRow.lastElementChild);
+  productFields.querySelectorAll(".yoghurt-matrix tbody tr").forEach((row) => {
+    const cell = document.createElement("td");
+    cell.innerHTML = `<input data-flavor-price data-size="${escapeHtml(normalizedSize)}" type="number" min="0" step="0.01" placeholder="Price" /><select data-flavor-stock data-size="${escapeHtml(normalizedSize)}" aria-label="${escapeHtml(normalizedSize)} stock"><option value="available">In stock</option><option value="out_of_stock">Out of stock</option></select>`;
+    row.insertBefore(cell, row.lastElementChild);
+  });
+}
+
 function addOptionRow(group) {
   const container = document.getElementById(group);
   if (!container) return;
@@ -895,7 +981,7 @@ function addOptionRow(group) {
   else
     container.insertAdjacentHTML(
       "beforeend",
-      optionRows({ "": "" }, group === "brukina-toppings" ? "toppings" : group),
+      optionRows({ "": "" }, group === "brukina-options" ? "options" : group),
     );
   container.lastElementChild
     .querySelector(".remove-option-btn")
@@ -938,10 +1024,16 @@ function collectConfigStock(type) {
     });
   };
   if (type === "brukina-custom")
-    addGroup("toppings", Object.keys(collectOptions("toppings")));
+    addGroup("options", Object.keys(collectOptions("options")));
   if (type === "flavor-size") {
-    addGroup("flavors", Object.keys(collectOptions("flavors")));
-    addGroup("sizes", Object.keys(collectOptions("sizes", true)));
+    stock.flavors = {};
+    document.querySelectorAll("#yoghurt-matrix-body tr").forEach((row) => {
+      const flavorId = row.dataset.yogurtFlavor;
+      stock.flavors[flavorId] = {};
+      row.querySelectorAll("[data-flavor-stock]").forEach((select) => {
+        stock.flavors[flavorId][select.dataset.size] = select.value;
+      });
+    });
   }
   if (type === "parfait-custom")
     ["fruits", "toppings", "syrups"].forEach((group) =>
@@ -963,15 +1055,28 @@ function collectConfig(type) {
   if (type === "brukina-custom")
     return {
       price: Number(document.getElementById("basePrice").value),
-      toppings: collectOptions("toppings"),
+      options: collectOptions("options"),
       stock: collectConfigStock(type),
     };
-  if (type === "flavor-size")
-    return {
-      flavors: collectOptions("flavors"),
-      sizes: collectOptions("sizes", true),
-      stock: collectConfigStock(type),
-    };
+  if (type === "flavor-size") {
+    const flavors = {};
+    const flavorPrices = {};
+    const sizes = {};
+    document.querySelectorAll("#yoghurt-matrix-body tr").forEach((row) => {
+      const flavorId = row.dataset.yogurtFlavor;
+      const label = row.querySelector("[data-flavor-label]").value.trim();
+      if (!label) return;
+      flavors[flavorId] = label;
+      flavorPrices[flavorId] = {};
+      row.querySelectorAll("[data-flavor-price]").forEach((input) => {
+        if (input.value !== "") {
+          flavorPrices[flavorId][input.dataset.size] = Number(input.value);
+          sizes[input.dataset.size] = Number(input.value);
+        }
+      });
+    });
+    return { flavors, sizes, flavorPrices, stock: collectConfigStock(type) };
+  }
   if (type === "parfait-custom")
     return {
       price: Number(document.getElementById("basePrice").value),
@@ -1027,8 +1132,6 @@ function openProductModal(product = null) {
   document.getElementById("productModalTitle").textContent = product
     ? `Edit ${product.name}`
     : "Add product";
-  document.getElementById("productId").value = product?.id || "";
-  document.getElementById("productId").disabled = Boolean(product);
   document.getElementById("productName").value = product?.name || "";
   document.getElementById("productCategory").value =
     product?.category || "Fresh Beverage";
@@ -1037,7 +1140,6 @@ function openProductModal(product = null) {
     product?.type || "brukina-custom",
     Boolean(product),
   );
-  setTapPicker("productStatus", product?.status || "available");
   document.getElementById("productSortOrder").value = product?.sortOrder || 0;
   document.getElementById("productImageUrl").value = product?.image || "";
   updateImagePreview(product?.image || "");
@@ -1090,12 +1192,11 @@ productForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   productFormError.hidden = true;
   const type = document.getElementById("productType").value;
+  const productName = document.getElementById("productName").value.trim();
   const payload = {
-    id: document.getElementById("productId").value.trim(),
-    name: document.getElementById("productName").value.trim(),
+    name: productName,
     category: document.getElementById("productCategory").value.trim(),
     type,
-    status: document.getElementById("productStatus").value,
     sortOrder: Number(document.getElementById("productSortOrder").value),
     image: document.getElementById("productImageUrl").value.trim(),
     description: document.getElementById("productDescription").value.trim(),
@@ -1167,6 +1268,17 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function formatOptionLabel(value) {
+  return String(value)
+    .replace(/^(\d+)ml$/i, "$1 ml")
+    .replace(/^(\d+)l$/i, "$1 L")
+    .replace(
+      /(^|[_-])(\w)/g,
+      (_, prefix, letter) =>
+        `${prefix === "_" || prefix === "-" ? " " : ""}${letter.toUpperCase()}`,
+    );
 }
 
 /* =========================

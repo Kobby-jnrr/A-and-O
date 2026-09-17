@@ -198,12 +198,73 @@ async function loadProducts() {
       },
       {},
     );
+    updateHeroAvailability(products);
     renderProducts();
   } catch (error) {
     console.error("Could not load products:", error);
     if (productList)
       productList.innerHTML = `<p class="placeholder-note">${escapeHtml(error.message || "Products are unavailable right now. Please refresh and try again.")}</p>`;
   }
+}
+
+function updateHeroAvailability(products) {
+  const hasAvailableOption = (product) => {
+    if (product.type === "flavor-size") {
+      const flavorPrices =
+        product.flavorPrices ||
+        Object.fromEntries(
+          Object.keys(product.flavors || {}).map((flavor) => [
+            flavor,
+            product.sizes || {},
+          ]),
+        );
+      return Object.entries(flavorPrices).some(([flavor, sizes]) =>
+        Object.keys(sizes || {}).some(
+          (size) => product.stock?.flavors?.[flavor]?.[size] !== "out_of_stock",
+        ),
+      );
+    }
+    if (product.type === "size-sweetness") {
+      const sweetnessPrices =
+        product.sweetnessPrices ||
+        Object.fromEntries(
+          ["sweetened", "unsweetened"].map((sweetness) => [
+            sweetness,
+            Object.fromEntries(
+              Object.entries(product.prices || {}).map(([size, values]) => [
+                size,
+                values?.[sweetness],
+              ]),
+            ),
+          ]),
+        );
+      return Object.entries(sweetnessPrices).some(([sweetness, sizes]) =>
+        Object.keys(sizes || {}).some(
+          (size) =>
+            product.stock?.sweetnesses?.[sweetness]?.[size] !== "out_of_stock",
+        ),
+      );
+    }
+    return true;
+  };
+  const statusFor = (name) => {
+    const product = products.find((item) =>
+      String(item.name || "")
+        .toLowerCase()
+        .includes(name),
+    );
+    return !product ||
+      product.status === "out_of_stock" ||
+      !hasAvailableOption(product)
+      ? "Out of stock"
+      : "Available";
+  };
+  const freshYoghurt = document.getElementById("freshYoghurtAvailability");
+  const parfait = document.getElementById("parfaitAvailability");
+  const greekYoghurt = document.getElementById("greekYoghurtAvailability");
+  if (freshYoghurt) freshYoghurt.textContent = statusFor("fresh yoghurt");
+  if (parfait) parfait.textContent = statusFor("parfait");
+  if (greekYoghurt) greekYoghurt.textContent = statusFor("greek yoghurt");
 }
 
 function formatOptionLabel(value) {
@@ -642,23 +703,34 @@ function renderCustomization(product) {
   }
 
   if (product.type === "size-sweetness") {
-    const sizes = Object.keys(product.prices || {});
-    const sweetnesses = [
-      ...new Set(
-        Object.values(product.prices || {}).flatMap((prices) =>
-          Object.keys(prices || {}),
-        ),
+    const sweetnessPrices = product.sweetnessPrices || {
+      sweetened: Object.fromEntries(
+        Object.entries(product.prices || {}).map(([size, values]) => [
+          size,
+          values.sweetened,
+        ]),
       ),
-    ];
-    const defaultSize = firstAvailableOption(
-      product.prices,
-      product,
-      "sizes",
-      "1l",
-    );
+      unsweetened: Object.fromEntries(
+        Object.entries(product.prices || {}).map(([size, values]) => [
+          size,
+          values.unsweetened,
+        ]),
+      ),
+    };
+    const sweetnesses = Object.keys(sweetnessPrices);
     const defaultSweetness = sweetnesses.includes("sweetened")
       ? "sweetened"
       : sweetnesses[0];
+    const availableSizes = Object.keys(
+      sweetnessPrices[defaultSweetness] || {},
+    ).filter(
+      (size) =>
+        product.stock?.sweetnesses?.[defaultSweetness]?.[size] !==
+          "out_of_stock" && product.stock?.sizes?.[size] !== "out_of_stock",
+    );
+    const defaultSize = availableSizes.includes("1l")
+      ? "1l"
+      : availableSizes[0];
     return `
       <div class="customize-grid">
 
@@ -670,7 +742,12 @@ function renderCustomization(product) {
 
           <div class="option-list">
 
-            ${sizes.map((size) => `<button type="button" class="option-button greek-size-option ${size === defaultSize ? "active" : ""}${optionIsAvailable(product, "sizes", size) ? "" : " option-unavailable"}" data-greek-size="${escapeHtml(size)}" aria-pressed="${size === defaultSize}"${optionIsAvailable(product, "sizes", size) ? "" : ' disabled aria-disabled="true"'}>${escapeHtml(formatOptionLabel(size))}${optionIsAvailable(product, "sizes", size) ? "" : " (Out of stock)"}</button>`).join("")}
+            ${Object.keys(sweetnessPrices[defaultSweetness] || {})
+              .map(
+                (size) =>
+                  `<button type="button" class="option-button greek-size-option ${size === defaultSize ? "active" : ""}${availableSizes.includes(size) ? "" : " option-unavailable"}" data-greek-size="${escapeHtml(size)}" aria-pressed="${size === defaultSize}"${availableSizes.includes(size) ? "" : ' disabled aria-disabled="true"'}>${escapeHtml(formatOptionLabel(size))}${availableSizes.includes(size) ? "" : " (Out of stock)"}</button>`,
+              )
+              .join("")}
 
           </div>
 
@@ -692,7 +769,7 @@ function renderCustomization(product) {
 
         <div class="customize-field">
           <label>Price</label>
-          <div class="product-price" data-custom-price="${escapeHtml(product.id)}">${formatMoney(product.prices?.[defaultSize]?.[defaultSweetness])}</div>
+          <div class="product-price" data-custom-price="${escapeHtml(product.id)}">${formatMoney(sweetnessPrices[defaultSweetness]?.[defaultSize])}</div>
         </div>
 
       </div>
@@ -734,7 +811,9 @@ function updateCustomizationPrice(box) {
       .greekSize;
     const sweetness = box.querySelector(".greek-sweetness-option.active")
       ?.dataset.greekSweetness;
-    price = product.prices?.[size]?.[sweetness];
+    price =
+      product.sweetnessPrices?.[sweetness]?.[size] ??
+      product.prices?.[size]?.[sweetness];
   } else if (product.type === "brukina-custom") {
     // base price + groundnut option
     const groundnutSelected = !!box.querySelector(
@@ -878,6 +957,37 @@ function initializeProductInteractions() {
 
       button.classList.add("active");
       button.setAttribute("aria-pressed", "true");
+      const product = PRODUCTS[box.closest(".product-row")?.dataset.productId];
+      const sweetness = button.dataset.greekSweetness;
+      const prices =
+        product?.sweetnessPrices?.[sweetness] ||
+        Object.fromEntries(
+          Object.entries(product?.prices || {}).map(([size, values]) => [
+            size,
+            values?.[sweetness],
+          ]),
+        );
+      const availableSizes = Object.keys(prices).filter(
+        (size) =>
+          product?.stock?.sweetnesses?.[sweetness]?.[size] !== "out_of_stock" &&
+          product?.stock?.sizes?.[size] !== "out_of_stock",
+      );
+      const preferredSize = availableSizes.includes("1l")
+        ? "1l"
+        : availableSizes[0];
+      box.querySelectorAll(".greek-size-option").forEach((sizeOption) => {
+        const available = availableSizes.includes(sizeOption.dataset.greekSize);
+        sizeOption.disabled = !available;
+        sizeOption.classList.toggle("option-unavailable", !available);
+        sizeOption.classList.toggle(
+          "active",
+          sizeOption.dataset.greekSize === preferredSize,
+        );
+        sizeOption.setAttribute(
+          "aria-pressed",
+          sizeOption.dataset.greekSize === preferredSize ? "true" : "false",
+        );
+      });
       updateCustomizationPrice(box);
     });
   });

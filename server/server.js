@@ -51,6 +51,13 @@ function flavorSizeIsAvailable(product, flavorId, sizeId) {
   );
 }
 
+function sweetnessSizeIsAvailable(product, sweetnessId, sizeId) {
+  return (
+    product?.stock?.sweetnesses?.[sweetnessId]?.[sizeId] !== "out_of_stock" &&
+    product?.stock?.sizes?.[sizeId] !== "out_of_stock"
+  );
+}
+
 function validateProductInput(input, { requireId = false } = {}) {
   const product = input || {};
   const result = {};
@@ -99,32 +106,6 @@ function validateProductInput(input, { requireId = false } = {}) {
     throw new Error("Product configuration must be an object.");
 
   return result;
-}
-
-function productIdBase(name) {
-  return (
-    String(name || "")
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "")
-      .slice(0, 40) || "product"
-  );
-}
-
-async function createProductId(name) {
-  const base = productIdBase(name);
-  let candidate = base;
-  let suffix = 2;
-  while (true) {
-    const result = await db.query(
-      "SELECT 1 FROM products WHERE id = $1 LIMIT 1",
-      [candidate],
-    );
-    if (!result.rowCount) return candidate;
-    candidate = `${base}-${suffix}`;
-    suffix += 1;
-  }
 }
 
 // ============================================================
@@ -460,19 +441,30 @@ app.post("/api/orders/init", async (req, res) => {
         const sweetness = String(item.sweetnessId || "")
           .trim()
           .toLowerCase();
+        const prices =
+          product.sweetnessPrices?.[sweetness] ||
+          Object.fromEntries(
+            Object.entries(product.prices || {}).map(([sizeId, values]) => [
+              sizeId,
+              values?.[sweetness],
+            ]),
+          );
         if (
-          !product.prices?.[size] ||
-          !optionIsAvailable(product, "sizes", size)
+          !prices?.[size] ||
+          !sweetnessSizeIsAvailable(product, sweetness, size)
         )
           return res
             .status(400)
             .json({ message: "Please select a valid size for Greek Yoghurt." });
-        if (!product.prices[size]?.[sweetness])
+        if (
+          !product.sweetnessPrices?.[sweetness] &&
+          !product.prices[size]?.[sweetness]
+        )
           return res.status(400).json({
             message:
               "Please select whether the Greek Yoghurt is sweetened or unsweetened.",
           });
-        unitPrice = product.prices[size][sweetness];
+        unitPrice = prices[size];
         description = `${size} - ${sweetness.charAt(0).toUpperCase() + sweetness.slice(1)}`;
       } else {
         return res
@@ -844,24 +836,32 @@ app.post("/api/orders", async (req, res) => {
         const sweetness = String(item.sweetnessId || "")
           .trim()
           .toLowerCase();
+        const prices =
+          product.sweetnessPrices?.[sweetness] ||
+          Object.fromEntries(
+            Object.entries(product.prices || {}).map(([sizeId, values]) => [
+              sizeId,
+              values?.[sweetness],
+            ]),
+          );
 
         if (
-          !product.prices?.[size] ||
-          !optionIsAvailable(product, "sizes", size)
+          !prices?.[size] ||
+          !sweetnessSizeIsAvailable(product, sweetness, size)
         ) {
           return res.status(400).json({
             message: "Please select a valid size for Greek Yoghurt.",
           });
         }
 
-        if (!product.prices[size]?.[sweetness]) {
+        if (!prices[size]) {
           return res.status(400).json({
             message:
               "Please select whether the Greek Yoghurt is sweetened or unsweetened.",
           });
         }
 
-        unitPrice = product.prices[size][sweetness];
+        unitPrice = prices[size];
 
         const displaySweetness =
           sweetness.charAt(0).toUpperCase() + sweetness.slice(1);
@@ -1184,12 +1184,10 @@ app.post("/api/admin/products", authenticateToken, async (req, res) => {
         message: "Product name, type, and configuration are required.",
       });
     }
-    const productId = await createProductId(product.name);
     const result = await db.query(
-      `INSERT INTO products (id, name, category, type, config, image_url, description, status, sort_order)
-       VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9) RETURNING *`,
+      `INSERT INTO products (name, category, type, config, image_url, description, status, sort_order)
+       VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8) RETURNING *`,
       [
-        productId,
         String(product.name).trim(),
         String(product.category || "Beverage").trim(),
         product.type,

@@ -1,8 +1,5 @@
 # Supabase database setup
 
-Your Supabase database is currently empty. Run the SQL below once in **Supabase Dashboard → SQL Editor → New query → Run**. It creates the order tables used by the app, the backend-driven `products` table, and inserts the four products that were previously hardcoded in the app.
-
-````sql
 Run this entire script once in **Supabase Dashboard -> SQL Editor -> New query -> Run** after deleting the old tables.
 
 The script removes and recreates the three tables used by the app, then inserts the starter products.
@@ -13,7 +10,7 @@ DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS products;
 
 CREATE TABLE products (
-  id TEXT PRIMARY KEY,
+  id TEXT PRIMARY KEY DEFAULT ('product-' || replace(gen_random_uuid()::text, '-', '')),
   name TEXT NOT NULL,
   category TEXT NOT NULL DEFAULT 'Beverage',
   type TEXT NOT NULL CHECK (
@@ -78,10 +75,9 @@ CREATE INDEX order_items_order_id_idx
   ON order_items (order_id);
 
 INSERT INTO products
-  (id, name, category, type, config, image_url, description, sort_order)
+  (name, category, type, config, image_url, description, sort_order)
 VALUES
 (
-  'brukina',
   'Brukina',
   'Fresh Beverage',
   'brukina-custom',
@@ -91,7 +87,6 @@ VALUES
   1
 ),
 (
-  'fresh-yoghurt-drink',
   'Fresh Yoghurt Drink',
   'Fresh Beverage',
   'flavor-size',
@@ -101,7 +96,6 @@ VALUES
   2
 ),
 (
-  'parfait',
   'Parfait',
   'Fresh Beverage',
   'parfait-custom',
@@ -111,16 +105,15 @@ VALUES
   3
 ),
 (
-  'greek-yoghurt',
   'Greek Yoghurt',
   'Fresh Beverage',
   'size-sweetness',
-  '{"prices":{"500ml":{"sweetened":50,"unsweetened":45},"1l":{"sweetened":100,"unsweetened":90}},"stock":{"sizes":{"500ml":"available","1l":"available"}}}',
+  '{"prices":{"500ml":{"sweetened":50,"unsweetened":45},"1l":{"sweetened":100,"unsweetened":90}},"sizes":{"500ml":50,"1l":100},"sweetnessPrices":{"sweetened":{"500ml":50,"1l":100},"unsweetened":{"500ml":45,"1l":90}},"stock":{"sweetnesses":{"sweetened":{"500ml":"available","1l":"available"},"unsweetened":{"500ml":"available","1l":"available"}}}}',
   'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=900&q=85',
   'Rich, creamy Greek yoghurt available in two sizes and two sweetness options.',
   4
 );
-````
+```
 
 ## Product status
 
@@ -134,4 +127,4 @@ VALUES
 2. From the `server` folder, run `npm start`.
 3. Open `/admin`, sign in, and manage products from the Products tab.
 
-The product configuration is stored as JSON because each product type has different options. When an admin adds a product, the server automatically creates its internal product ID from the product name. Admins only need to enter the product name.
+The product configuration is stored as JSON because each product type has different options. Product IDs are generated automatically by the database. Admins only need to enter the product name.

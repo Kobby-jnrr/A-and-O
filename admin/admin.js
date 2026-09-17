@@ -849,18 +849,10 @@ function renderProductFields(type, config = {}) {
     renderYoghurtFields(config);
   } else if (type === "parfait-custom") {
     productFields.innerHTML = `<h3>Parfait details</h3><label>Base price (GHS)<input id="basePrice" type="number" min="0" step="0.01" value="${escapeHtml(config.price ?? 40)}" required /></label>${["fruits", "toppings", "syrups"].map((group) => `<div class="options-editor"><div class="options-heading"><strong>${group[0].toUpperCase() + group.slice(1)}</strong><button type="button" class="add-option-btn" data-group="${group}">Add ${group.slice(0, -1)}</button></div><div id="${group}">${optionRows(config[group] || (group === "syrups" ? { none: "No Syrup" } : {}), group)}</div></div>`).join("")}`;
+  } else if (type === "size-sweetness") {
+    renderGreekFields(config);
   } else {
-    const prices = config.prices || {
-      "500ml": { sweetened: 50, unsweetened: 45 },
-    };
-    productFields.innerHTML = `<h3>Size and sweetness prices</h3><div class="options-editor"><div class="options-heading"><strong>Sizes</strong><button type="button" class="add-option-btn" data-group="sweetness-prices">Add size</button></div><div id="sweetness-prices">${Object.entries(
-      prices,
-    )
-      .map(
-        ([size, values]) =>
-          `<div class="option-row sweetness-row" data-option-group="sizes"><input data-size value="${escapeHtml(size)}" placeholder="Size" /><input data-sweetened type="number" min="0" step="0.01" value="${escapeHtml(values.sweetened ?? "")}" placeholder="Sweetened price" /><input data-unsweetened type="number" min="0" step="0.01" value="${escapeHtml(values.unsweetened ?? "")}" placeholder="Unsweetened price" /><select data-option-status aria-label="${escapeHtml(size)} stock status"><option value="available">In stock</option><option value="out_of_stock">Out of stock</option></select><button type="button" class="remove-option-btn">Remove</button></div>`,
-      )
-      .join("")}</div></div>`;
+    productFields.innerHTML = "";
   }
   productFields
     .querySelectorAll(".add-option-btn")
@@ -877,6 +869,90 @@ function renderProductFields(type, config = {}) {
       ),
     );
   applyOptionStockStatuses(config);
+}
+
+function renderGreekFields(config = {}) {
+  const legacyPrices = config.prices || {
+    "500ml": { sweetened: 50, unsweetened: 45 },
+  };
+  const sizes = Object.keys(config.sizes || legacyPrices);
+  const sweetnessPrices =
+    config.sweetnessPrices ||
+    Object.fromEntries(
+      ["sweetened", "unsweetened"].map((sweetness) => [
+        sweetness,
+        Object.fromEntries(
+          sizes.map((size) => [size, legacyPrices[size]?.[sweetness] ?? ""]),
+        ),
+      ]),
+    );
+  const header = sizes
+    .map((size) => `<th>${escapeHtml(formatOptionLabel(size))}</th>`)
+    .join("");
+  const rows = Object.entries(sweetnessPrices)
+    .map(
+      ([sweetness, prices]) =>
+        `<tr data-greek-sweetness="${escapeHtml(sweetness)}"><td><input data-sweetness-label value="${escapeHtml(formatOptionLabel(sweetness))}" placeholder="Sweetness name" /></td>${sizes
+          .map(
+            (size) =>
+              `<td><input data-sweetness-price data-size="${escapeHtml(size)}" type="number" min="0" step="0.01" value="${escapeHtml(prices?.[size] ?? "")}" placeholder="Price" /><select data-sweetness-stock data-size="${escapeHtml(size)}" aria-label="${escapeHtml(sweetness)} ${escapeHtml(size)} stock"><option value="available">In stock</option><option value="out_of_stock">Out of stock</option></select></td>`,
+          )
+          .join(
+            "",
+          )}<td><button type="button" class="remove-greek-sweetness-btn">Remove</button></td></tr>`,
+    )
+    .join("");
+  productFields.innerHTML = `<h3>Greek yoghurt details</h3><div class="options-editor yoghurt-matrix-editor"><div class="options-heading"><strong>Sweetness, sizes, prices and stock</strong><div><button type="button" class="add-greek-sweetness-btn">Add sweetness</button><button type="button" class="add-greek-size-btn">Add size</button></div></div><div class="yoghurt-matrix-wrap"><table class="yoghurt-matrix"><thead><tr><th>Sweetness</th>${header}<th></th></tr></thead><tbody id="greek-matrix-body">${rows}</tbody></table></div></div>`;
+  productFields.querySelectorAll("#greek-matrix-body tr").forEach((row) => {
+    const sweetness = row.dataset.greekSweetness;
+    row.querySelectorAll("[data-sweetness-stock]").forEach((select) => {
+      select.value =
+        config.stock?.sweetnesses?.[sweetness]?.[select.dataset.size] ||
+        config.stock?.sizes?.[select.dataset.size] ||
+        "available";
+    });
+  });
+  productFields
+    .querySelector(".add-greek-sweetness-btn")
+    .addEventListener("click", () => addGreekSweetness());
+  productFields
+    .querySelector(".add-greek-size-btn")
+    .addEventListener("click", () => addGreekSize());
+  productFields
+    .querySelectorAll(".remove-greek-sweetness-btn")
+    .forEach((button) =>
+      button.addEventListener("click", () => button.closest("tr").remove()),
+    );
+}
+
+function addGreekSweetness() {
+  const body = document.getElementById("greek-matrix-body");
+  const sizes = [
+    ...body.querySelectorAll("tr:first-child [data-sweetness-price]"),
+  ].map((input) => input.dataset.size);
+  const sweetnessId = `sweetness_${body.children.length + 1}`;
+  const row = document.createElement("tr");
+  row.dataset.greekSweetness = sweetnessId;
+  row.innerHTML = `<td><input data-sweetness-label value="" placeholder="Sweetness name" /></td>${sizes.map((size) => `<td><input data-sweetness-price data-size="${escapeHtml(size)}" type="number" min="0" step="0.01" placeholder="Price" /><select data-sweetness-stock data-size="${escapeHtml(size)}" aria-label="${escapeHtml(size)} stock"><option value="available">In stock</option><option value="out_of_stock">Out of stock</option></select></td>`).join("")}<td><button type="button" class="remove-greek-sweetness-btn">Remove</button></td>`;
+  body.appendChild(row);
+  row
+    .querySelector(".remove-greek-sweetness-btn")
+    .addEventListener("click", () => row.remove());
+}
+
+function addGreekSize() {
+  const headerRow = productFields.querySelector(".yoghurt-matrix thead tr");
+  const sizeId = window.prompt("Enter the new size, for example 1l:");
+  if (!sizeId?.trim()) return;
+  const normalizedSize = sizeId.trim();
+  const headerCell = document.createElement("th");
+  headerCell.textContent = formatOptionLabel(normalizedSize);
+  headerRow.insertBefore(headerCell, headerRow.lastElementChild);
+  productFields.querySelectorAll("#greek-matrix-body tr").forEach((row) => {
+    const cell = document.createElement("td");
+    cell.innerHTML = `<input data-sweetness-price data-size="${escapeHtml(normalizedSize)}" type="number" min="0" step="0.01" placeholder="Price" /><select data-sweetness-stock data-size="${escapeHtml(normalizedSize)}" aria-label="${escapeHtml(normalizedSize)} stock"><option value="available">In stock</option><option value="out_of_stock">Out of stock</option></select>`;
+    row.insertBefore(cell, row.lastElementChild);
+  });
 }
 
 function renderYoghurtFields(config = {}) {
@@ -1040,12 +1116,13 @@ function collectConfigStock(type) {
       addGroup(group, Object.keys(collectOptions(group))),
     );
   if (type === "size-sweetness") {
-    stock.sizes = {};
-    document.querySelectorAll(".sweetness-row").forEach((row) => {
-      const id = row.querySelector("[data-size]").value.trim();
-      if (id)
-        stock.sizes[id] =
-          row.querySelector("[data-option-status]")?.value || "available";
+    stock.sweetnesses = {};
+    document.querySelectorAll("#greek-matrix-body tr").forEach((row) => {
+      const sweetness = row.dataset.greekSweetness;
+      stock.sweetnesses[sweetness] = {};
+      row.querySelectorAll("[data-sweetness-stock]").forEach((select) => {
+        stock.sweetnesses[sweetness][select.dataset.size] = select.value;
+      });
     });
   }
   return stock;
@@ -1085,6 +1162,27 @@ function collectConfig(type) {
       syrups: collectOptions("syrups"),
       stock: collectConfigStock(type),
     };
+  if (type === "size-sweetness") {
+    const sweetnessPrices = {};
+    const prices = {};
+    const sizes = {};
+    document.querySelectorAll("#greek-matrix-body tr").forEach((row) => {
+      const sweetnessId = row.dataset.greekSweetness;
+      const label = row.querySelector("[data-sweetness-label]").value.trim();
+      if (!label) return;
+      sweetnessPrices[sweetnessId] = {};
+      row.querySelectorAll("[data-sweetness-price]").forEach((input) => {
+        if (input.value !== "") {
+          sweetnessPrices[sweetnessId][input.dataset.size] = Number(
+            input.value,
+          );
+          sizes[input.dataset.size] = Number(input.value);
+        }
+      });
+      prices[sweetnessId] = sweetnessPrices[sweetnessId];
+    });
+    return { prices, sizes, sweetnessPrices, stock: collectConfigStock(type) };
+  }
   return {
     stock: collectConfigStock(type),
     prices: [...document.querySelectorAll(".sweetness-row")].reduce(

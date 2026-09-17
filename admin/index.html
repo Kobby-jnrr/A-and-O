@@ -101,8 +101,19 @@
 
       <section class="dashboard-content">
         <nav class="dashboard-tabs" aria-label="Dashboard sections">
-          <button type="button" class="dashboard-tab active" data-tab="orders">
-            Orders
+          <button
+            type="button"
+            class="dashboard-tab active"
+            data-tab="active-orders"
+          >
+            Active Orders
+          </button>
+          <button
+            type="button"
+            class="dashboard-tab"
+            data-tab="completed-orders"
+          >
+            Completed Orders
           </button>
           <button type="button" class="dashboard-tab" data-tab="products">
             Products
@@ -194,7 +205,7 @@
           </div>
 
           <div class="orders-split">
-            <section class="orders-subsection">
+            <section id="activeOrdersSection" class="orders-subsection">
               <div class="section-heading small">
                 <div>
                   <h3>Active Orders</h3>
@@ -205,7 +216,11 @@
               <div id="activeOrdersContainer" class="orders-container"></div>
             </section>
 
-            <section class="orders-subsection">
+            <section
+              id="completedOrdersSection"
+              class="orders-subsection"
+              hidden
+            >
               <div class="section-heading small">
                 <div>
                   <h3>Completed Orders</h3>

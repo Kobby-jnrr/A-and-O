@@ -957,37 +957,6 @@ function initializeProductInteractions() {
 
       button.classList.add("active");
       button.setAttribute("aria-pressed", "true");
-      const product = PRODUCTS[box.closest(".product-row")?.dataset.productId];
-      const sweetness = button.dataset.greekSweetness;
-      const prices =
-        product?.sweetnessPrices?.[sweetness] ||
-        Object.fromEntries(
-          Object.entries(product?.prices || {}).map(([size, values]) => [
-            size,
-            values?.[sweetness],
-          ]),
-        );
-      const availableSizes = Object.keys(prices).filter(
-        (size) =>
-          product?.stock?.sweetnesses?.[sweetness]?.[size] !== "out_of_stock" &&
-          product?.stock?.sizes?.[size] !== "out_of_stock",
-      );
-      const preferredSize = availableSizes.includes("1l")
-        ? "1l"
-        : availableSizes[0];
-      box.querySelectorAll(".greek-size-option").forEach((sizeOption) => {
-        const available = availableSizes.includes(sizeOption.dataset.greekSize);
-        sizeOption.disabled = !available;
-        sizeOption.classList.toggle("option-unavailable", !available);
-        sizeOption.classList.toggle(
-          "active",
-          sizeOption.dataset.greekSize === preferredSize,
-        );
-        sizeOption.setAttribute(
-          "aria-pressed",
-          sizeOption.dataset.greekSize === preferredSize ? "true" : "false",
-        );
-      });
       updateCustomizationPrice(box);
     });
   });
@@ -1104,6 +1073,38 @@ function initializeProductInteractions() {
 
       button.classList.add("active");
       button.setAttribute("aria-pressed", "true");
+      const product = PRODUCTS[box.closest(".product-row")?.dataset.productId];
+      const sweetness = button.dataset.greekSweetness;
+      const prices =
+        product?.sweetnessPrices?.[sweetness] ||
+        Object.fromEntries(
+          Object.entries(product?.prices || {}).map(([size, values]) => [
+            size,
+            values?.[sweetness],
+          ]),
+        );
+      const availableSizes = Object.keys(prices).filter(
+        (size) =>
+          prices[size] !== undefined &&
+          product?.stock?.sweetnesses?.[sweetness]?.[size] !== "out_of_stock" &&
+          product?.stock?.sizes?.[size] !== "out_of_stock",
+      );
+      const preferredSize = availableSizes.includes("1l")
+        ? "1l"
+        : availableSizes[0];
+      box.querySelectorAll(".greek-size-option").forEach((sizeOption) => {
+        const available = availableSizes.includes(sizeOption.dataset.greekSize);
+        sizeOption.disabled = !available;
+        sizeOption.classList.toggle("option-unavailable", !available);
+        sizeOption.classList.toggle(
+          "active",
+          sizeOption.dataset.greekSize === preferredSize,
+        );
+        sizeOption.setAttribute(
+          "aria-pressed",
+          sizeOption.dataset.greekSize === preferredSize ? "true" : "false",
+        );
+      });
       updateCustomizationPrice(box);
     });
   });

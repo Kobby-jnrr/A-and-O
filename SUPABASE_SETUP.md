@@ -5,6 +5,8 @@ Run this entire script once in **Supabase Dashboard -> SQL Editor -> New query -
 The script removes and recreates the three tables used by the app, then inserts the starter products.
 
 ```sql
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS products;

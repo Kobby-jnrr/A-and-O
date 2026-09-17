@@ -21,6 +21,10 @@ const pendingPayments = document.getElementById("pendingPayments");
 const verifiedPayments = document.getElementById("verifiedPayments");
 const activeOrders = document.getElementById("activeOrders");
 const ordersSection = document.getElementById("ordersSection");
+const activeOrdersSection = document.getElementById("activeOrdersSection");
+const completedOrdersSection = document.getElementById(
+  "completedOrdersSection",
+);
 const ordersIntro = document.getElementById("ordersIntro");
 const ordersSummary = document.getElementById("ordersSummary");
 const productsSection = document.getElementById("productsSection");
@@ -828,7 +832,7 @@ function optionRows(entries = {}, group, includePrice = false) {
   return Object.entries(entries)
     .map(
       ([id, value]) =>
-        `<div class="option-row" data-option-group="${group}"><input data-option-id value="${escapeHtml(id)}" placeholder="ID" /><input data-option-label value="${escapeHtml(includePrice ? id : value)}" placeholder="${includePrice ? "Size" : "Name"}" />${includePrice ? `<input data-option-price type="number" min="0" step="0.01" value="${escapeHtml(value)}" placeholder="Price" />` : ""}<select data-option-status aria-label="${escapeHtml(id)} stock status"><option value="available">In stock</option><option value="out_of_stock">Out of stock</option></select><button type="button" class="remove-option-btn">Remove</button></div>`,
+        `<div class="option-row" data-option-group="${group}"><input data-option-id type="hidden" value="${escapeHtml(id)}" /><input data-option-label value="${escapeHtml(includePrice ? id : value)}" placeholder="${includePrice ? "Size" : "Name"}" />${includePrice ? `<input data-option-price type="number" min="0" step="0.01" value="${escapeHtml(value)}" placeholder="Price" />` : ""}<select data-option-status aria-label="${escapeHtml(value)} stock status"><option value="available">In stock</option><option value="out_of_stock">Out of stock</option></select><button type="button" class="remove-option-btn">Remove</button></div>`,
     )
     .join("");
 }
@@ -1070,7 +1074,11 @@ function collectOptions(group, hasPrice = false) {
   return [
     ...document.querySelectorAll(`[data-option-group="${group}"]`),
   ].reduce((options, row) => {
-    const id = row.querySelector("[data-option-id]").value.trim();
+    const label = row
+      .querySelector(hasPrice ? "[data-option-label]" : "[data-option-label]")
+      .value.trim();
+    const idInput = row.querySelector("[data-option-id]");
+    const id = idInput?.value.trim() || optionIdFromLabel(label);
     const value = row.querySelector(
       hasPrice ? "[data-option-price]" : "[data-option-label]",
     ).value;
@@ -1080,14 +1088,23 @@ function collectOptions(group, hasPrice = false) {
   }, {});
 }
 
+function optionIdFromLabel(label) {
+  return (
+    String(label || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "") || "option"
+  );
+}
+
 function collectStock(group, id) {
   const row = [
     ...document.querySelectorAll(`[data-option-group="${group}"]`),
-  ].find(
-    (candidate) =>
-      candidate.querySelector("[data-option-id], [data-size]")?.value.trim() ===
-      id,
-  );
+  ].find((candidate) => {
+    const storedId = candidate.querySelector("[data-option-id]")?.value.trim();
+    const label = candidate.querySelector("[data-option-label]")?.value.trim();
+    return (storedId || optionIdFromLabel(label)) === id;
+  });
   return row?.querySelector("[data-option-status]")?.value || "available";
 }
 
@@ -1258,6 +1275,7 @@ function showSmallError(message) {
 document.querySelectorAll(".dashboard-tab").forEach((button) =>
   button.addEventListener("click", () => {
     const productsActive = button.dataset.tab === "products";
+    const completedActive = button.dataset.tab === "completed-orders";
     document
       .querySelectorAll(".dashboard-tab")
       .forEach((tab) => tab.classList.toggle("active", tab === button));
@@ -1265,6 +1283,8 @@ document.querySelectorAll(".dashboard-tab").forEach((button) =>
     ordersIntro.hidden = productsActive;
     ordersSummary.hidden = productsActive;
     productsSection.hidden = !productsActive;
+    activeOrdersSection.hidden = productsActive || completedActive;
+    completedOrdersSection.hidden = productsActive || !completedActive;
     if (productsActive) loadProducts();
   }),
 );

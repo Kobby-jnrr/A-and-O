@@ -123,7 +123,7 @@ async function loadOrders() {
 
     renderOrders(Array.isArray(orders) ? orders : []);
   } catch (error) {
-    console.error("Could not load orders:", error);
+    console.error("Could not load orders");
 
     updateSummary([]);
 
@@ -656,7 +656,7 @@ async function saveOrderChanges({
       await loadOrders();
     }, 700);
   } catch (error) {
-    console.error("Could not save order:", error);
+    console.error("Could not save order");
 
     button.innerHTML = originalText;
 
@@ -685,7 +685,7 @@ async function loadProducts() {
     if (!response.ok) throw new Error("Could not load products.");
     renderProducts(await response.json());
   } catch (error) {
-    console.error("Could not load products:", error);
+    console.error("Could not load products");
     productsContainer.innerHTML = `<div class="empty-orders"><h3>Could not load products</h3><p>Please check that the database setup has been run.</p></div>`;
   }
 }

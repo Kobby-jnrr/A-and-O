@@ -201,7 +201,7 @@ async function loadProducts() {
     updateHeroAvailability(products);
     renderProducts();
   } catch (error) {
-    console.error("Could not load products:", error);
+    console.error("Could not load products");
     if (productList)
       productList.innerHTML = `<p class="placeholder-note">${escapeHtml(error.message || "Products are unavailable right now. Please refresh and try again.")}</p>`;
   }
@@ -1985,10 +1985,10 @@ async function submitOrder(event) {
         setTimeout(() => {
           (async () => {
             try {
-              console.log("Paystack callback", transaction);
+              console.log("Paystack payment callback received");
               await placeOrderWithReference(transaction.reference);
             } catch (err) {
-              console.error("Error in paystack callback wrapper:", err);
+              console.error("Error in Paystack callback wrapper");
             }
           })();
         }, 0);
@@ -2055,7 +2055,7 @@ async function submitOrder(event) {
           data.totalAmount || amountGHS,
         );
       } catch (orderError) {
-        console.error("Order save error after payment:", orderError);
+        console.error("Order save error after payment");
         showSmallNotice(
           orderError.message ||
             "Your payment went through but we couldn't record your order.",
@@ -2109,7 +2109,7 @@ async function submitOrder(event) {
       }, pollInterval);
     })(reference);
   } catch (error) {
-    console.error("Paystack init error:", error);
+    console.error("Paystack initialization error");
 
     showSmallNotice(
       error.message || "We couldn't start the payment. Please try again.",
@@ -2355,7 +2355,7 @@ async function fetchTrackedOrder(orderNumber) {
 
     renderTrackedOrder(data.order || data);
   } catch (error) {
-    console.error("Tracking error:", error);
+    console.error("Order tracking error");
 
     renderTrackingError(
       error.message ||

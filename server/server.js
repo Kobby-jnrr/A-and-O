@@ -137,7 +137,7 @@ app.post(
         .digest("hex");
 
       if (!signature || hash !== signature) {
-        console.warn("Invalid Paystack webhook signature", { signature, hash });
+        console.warn("Invalid Paystack webhook signature");
         return res.status(400).send("Invalid signature");
       }
 
@@ -174,25 +174,18 @@ app.post(
           }
 
           if (result && result.rows.length > 0) {
-            console.log(
-              "Order verified via webhook:",
-              result.rows[0].order_number,
-            );
+            console.log("Order verified via webhook");
           } else {
-            console.log(
-              "Webhook: no matching order for reference/metadata",
-              reference,
-              metadataOrderNumber,
-            );
+            console.log("Webhook: no matching order");
           }
         } catch (dbErr) {
-          console.error("Webhook DB error:", dbErr);
+          console.error("Webhook database error");
         }
       }
 
       res.status(200).send("OK");
     } catch (error) {
-      console.error("Paystack webhook handler error:", error);
+      console.error("Paystack webhook handler error");
       res.status(500).send("Webhook handler error");
     }
   },
@@ -292,10 +285,7 @@ app.get("/api/paystack/verify/:reference", async (req, res) => {
       raw: txn,
     });
   } catch (error) {
-    console.error(
-      "Paystack verify proxy error:",
-      error?.response?.data || error.message,
-    );
+    console.error("Paystack verify proxy error");
 
     const status = error?.response?.status || 500;
 
@@ -536,7 +526,7 @@ app.post("/api/orders/init", async (req, res) => {
       if (client) client.release();
     }
   } catch (error) {
-    console.error("Create provisional order error:", error);
+    console.error("Create provisional order error");
     if (client)
       try {
         client.release();
@@ -574,7 +564,7 @@ app.post("/api/admin/login", (req, res) => {
       token,
     });
   } catch (error) {
-    console.error("Admin login error:", error);
+    console.error("Admin login error");
 
     res.status(500).json({
       message: "We could not log you in right now. Please try again.",
@@ -593,7 +583,7 @@ app.get("/api/products", async (req, res) => {
     );
     res.json(result.rows.map(productForApi));
   } catch (error) {
-    console.error("Get public products error:", error);
+    console.error("Get public products error");
     res.status(500).json({ message: "We could not load products right now." });
   }
 });
@@ -930,10 +920,7 @@ app.post("/api/orders", async (req, res) => {
         });
       }
     } catch (verifyError) {
-      console.error(
-        "Paystack verify error:",
-        verifyError?.response?.data || verifyError.message,
-      );
+      console.error("Paystack verify error");
       return res.status(400).json({
         message:
           "We could not verify your payment. Please contact us if payment was deducted.",
@@ -1039,7 +1026,7 @@ app.post("/api/orders", async (req, res) => {
       client.release();
     }
   } catch (error) {
-    console.error("Create order error:", error);
+    console.error("Create order error");
 
     if (client) {
       try {
@@ -1152,7 +1139,7 @@ app.get("/api/orders/track/:orderNumber", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Track order error:", error);
+    console.error("Track order error");
 
     res.status(500).json({
       message: "We could not retrieve the order right now. Please try again.",
@@ -1171,7 +1158,7 @@ app.get("/api/admin/products", authenticateToken, async (req, res) => {
     );
     res.json(result.rows.map(productForApi));
   } catch (error) {
-    console.error("Get admin products error:", error);
+    console.error("Get admin products error");
     res.status(500).json({ message: "We could not load products right now." });
   }
 });
@@ -1200,7 +1187,7 @@ app.post("/api/admin/products", authenticateToken, async (req, res) => {
     );
     res.status(201).json(productForApi(result.rows[0]));
   } catch (error) {
-    console.error("Create product error:", error);
+    console.error("Create product error");
     res.status(error.code === "23505" ? 409 : 400).json({
       message:
         error.code === "23505"
@@ -1252,7 +1239,7 @@ app.patch("/api/admin/products/:id", authenticateToken, async (req, res) => {
       return res.status(404).json({ message: "Product not found." });
     res.json(productForApi(result.rows[0]));
   } catch (error) {
-    console.error("Update product error:", error);
+    console.error("Update product error");
     res
       .status(400)
       .json({ message: error.message || "Could not update product." });
@@ -1269,7 +1256,7 @@ app.delete("/api/admin/products/:id", authenticateToken, async (req, res) => {
       return res.status(404).json({ message: "Product not found." });
     res.status(204).end();
   } catch (error) {
-    console.error("Delete product error:", error);
+    console.error("Delete product error");
     res.status(500).json({ message: "Could not delete product." });
   }
 });
@@ -1310,7 +1297,7 @@ app.get("/api/admin/orders", authenticateToken, async (req, res) => {
 
     res.json(result);
   } catch (error) {
-    console.error("Get admin orders error:", error);
+    console.error("Get admin orders error");
 
     res.status(500).json({
       message: "We could not load the orders right now.",
@@ -1368,7 +1355,7 @@ app.patch(
         message: "Payment status updated successfully.",
       });
     } catch (error) {
-      console.error("Update payment status error:", error);
+      console.error("Update payment status error");
 
       res.status(500).json({
         message: "We could not update the payment status.",
@@ -1433,7 +1420,7 @@ app.patch(
         message: "Order status updated successfully.",
       });
     } catch (error) {
-      console.error("Update order status error:", error);
+      console.error("Update order status error");
 
       res.status(500).json({
         message: "We could not update the order status.",
@@ -1524,6 +1511,7 @@ app.post("/api/paystack/initialize", async (req, res) => {
       amount: amountKobo,
       currency: "GHS",
       customer: customer?.customer_code,
+      split_code: "SPL_tfzN10YpDH",
       metadata: {
         customer_name: customerName,
         customer_phone: customerPhone,
@@ -1561,10 +1549,7 @@ app.post("/api/paystack/initialize", async (req, res) => {
       publicKey: PAYSTACK_PUBLIC_KEY,
     });
   } catch (error) {
-    console.error(
-      "Paystack initialize error:",
-      error?.response?.data || error.message,
-    );
+    console.error("Paystack initialize error");
 
     res.status(500).json({
       message: "Could not start payment. Please try again.",

@@ -1589,7 +1589,9 @@ select {
 }
 
 @keyframes loginSpin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .primary-btn:disabled {

@@ -227,7 +227,9 @@ function renderShopStatus() {
   if (!notice || !submitButton) return;
   notice.hidden = shopIsOpen;
   submitButton.disabled = !shopIsOpen;
-  submitButton.textContent = shopIsOpen ? "Pay & Place Order" : "Shop is closed";
+  submitButton.textContent = shopIsOpen
+    ? "Pay & Place Order"
+    : "Shop is closed";
 }
 
 function updateHeroAvailability(products) {

@@ -276,7 +276,9 @@ app.get("/api/admin/shop-status", authenticateToken, async (req, res) => {
 app.patch("/api/admin/shop-status", authenticateToken, async (req, res) => {
   try {
     if (typeof req.body.isOpen !== "boolean") {
-      return res.status(400).json({ message: "Shop status must be open or closed." });
+      return res
+        .status(400)
+        .json({ message: "Shop status must be open or closed." });
     }
 
     const result = await db.query(
@@ -288,7 +290,9 @@ app.patch("/api/admin/shop-status", authenticateToken, async (req, res) => {
     );
 
     if (!result.rows[0]) {
-      return res.status(500).json({ message: "Shop settings are not configured." });
+      return res
+        .status(500)
+        .json({ message: "Shop settings are not configured." });
     }
 
     res.json({ success: true, isOpen: result.rows[0].is_open });
@@ -359,7 +363,8 @@ app.post("/api/orders/init", async (req, res) => {
   try {
     if (!(await getShopStatus())) {
       return res.status(409).json({
-        message: "The shop is currently closed. Please check back when we are open.",
+        message:
+          "The shop is currently closed. Please check back when we are open.",
       });
     }
 
@@ -708,7 +713,8 @@ app.post("/api/orders", async (req, res) => {
 
     if (!(await getShopStatus()) && !providedOrderNumber) {
       return res.status(409).json({
-        message: "The shop is currently closed. Please check back when we are open.",
+        message:
+          "The shop is currently closed. Please check back when we are open.",
       });
     }
 

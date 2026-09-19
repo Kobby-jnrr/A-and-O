@@ -142,7 +142,8 @@ async function updateShopStatus(isOpen) {
     });
     if (response.status === 401) return logout();
     const data = await response.json();
-    if (!response.ok) throw new Error(data.message || "Could not update shop status.");
+    if (!response.ok)
+      throw new Error(data.message || "Could not update shop status.");
     renderShopStatus(data.isOpen);
   } catch (error) {
     shopStatusError.textContent = error.message;

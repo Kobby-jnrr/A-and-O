@@ -213,10 +213,10 @@ async function loadShopStatus() {
     const response = await fetch(`${API_BASE_URL}/shop-status`);
     if (!response.ok) throw new Error("Could not check shop status.");
     const data = await response.json();
-    shopIsOpen = data.isOpen !== false;
+    shopIsOpen = data.isOpen === true;
   } catch (error) {
     console.error("Could not load shop status");
-    shopIsOpen = true;
+    shopIsOpen = false;
   }
   renderShopStatus();
 }
@@ -224,12 +224,21 @@ async function loadShopStatus() {
 function renderShopStatus() {
   const notice = $("#shopStatusNotice");
   const submitButton = $("#submitOrderBtn");
+  const homepageStatus = $("#homepageShopStatus");
+  const isClosed = shopIsOpen !== true;
+
+  if (homepageStatus) {
+    homepageStatus.textContent = isClosed ? "Closed" : "Open for orders";
+    homepageStatus.classList.toggle("shop-status-open", !isClosed);
+    homepageStatus.classList.toggle("shop-status-closed", isClosed);
+  }
+
   if (!notice || !submitButton) return;
-  notice.hidden = shopIsOpen;
-  submitButton.disabled = !shopIsOpen;
-  submitButton.textContent = shopIsOpen
-    ? "Pay & Place Order"
-    : "Shop is closed";
+
+  notice.hidden = !isClosed;
+  notice.classList.toggle("shop-status-notice-closed", isClosed);
+  submitButton.disabled = isClosed;
+  submitButton.textContent = isClosed ? "Shop is closed" : "Pay & Place Order";
 }
 
 function updateHeroAvailability(products) {
@@ -1526,6 +1535,8 @@ function openDrawer() {
   if (!drawer || !backdrop) {
     return;
   }
+
+  loadShopStatus();
 
   drawer.classList.add("open");
 

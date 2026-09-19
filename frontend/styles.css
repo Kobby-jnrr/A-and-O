@@ -696,6 +696,14 @@ a {
   white-space: nowrap;
 }
 
+.shop-status-open {
+  color: var(--success) !important;
+}
+
+.shop-status-closed {
+  color: var(--danger) !important;
+}
+
 /* =========================================================
    MARQUEE
 ========================================================= */
@@ -1874,6 +1882,10 @@ footer {
   color: var(--danger);
   font-size: 0.72rem;
   line-height: 1.45;
+}
+
+.shop-status-notice[hidden] {
+  display: none !important;
 }
 
 .shop-status-notice strong {

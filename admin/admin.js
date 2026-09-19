@@ -34,6 +34,11 @@ const productModal = document.getElementById("productModal");
 const productForm = document.getElementById("productForm");
 const productFormError = document.getElementById("productFormError");
 const productFields = document.getElementById("productFields");
+const shopStatusLabel = document.getElementById("shopStatusLabel");
+const shopStatusDescription = document.getElementById("shopStatusDescription");
+const shopStatusError = document.getElementById("shopStatusError");
+const shopOpenBtn = document.getElementById("shopOpenBtn");
+const shopClosedBtn = document.getElementById("shopClosedBtn");
 let adminProducts = [];
 let editingProductId = null;
 
@@ -87,6 +92,65 @@ function showDashboard() {
 
   loadOrders();
   loadProducts();
+  loadShopStatus();
+}
+
+async function loadShopStatus() {
+  const token = localStorage.getItem("aoAdminToken");
+  if (!token) return;
+
+  try {
+    const response = await fetch(`${API_URL}/api/admin/shop-status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.status === 401) return logout();
+    if (!response.ok) throw new Error("Could not load shop status.");
+    const data = await response.json();
+    renderShopStatus(data.isOpen);
+  } catch (error) {
+    shopStatusError.textContent = error.message;
+    shopStatusError.hidden = false;
+  }
+}
+
+function renderShopStatus(isOpen) {
+  shopStatusLabel.textContent = isOpen ? "Shop is open" : "Shop is closed";
+  shopStatusDescription.textContent = isOpen
+    ? "Customers can place orders when the shop is open."
+    : "Customers cannot start new orders while the shop is closed.";
+  shopOpenBtn.classList.toggle("selected", isOpen);
+  shopClosedBtn.classList.toggle("selected", !isOpen);
+  shopStatusError.hidden = true;
+}
+
+async function updateShopStatus(isOpen) {
+  const token = localStorage.getItem("aoAdminToken");
+  if (!token) return showLogin();
+
+  shopOpenBtn.disabled = true;
+  shopClosedBtn.disabled = true;
+  shopStatusError.hidden = true;
+
+  try {
+    const response = await fetch(`${API_URL}/api/admin/shop-status`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ isOpen }),
+    });
+    if (response.status === 401) return logout();
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || "Could not update shop status.");
+    renderShopStatus(data.isOpen);
+  } catch (error) {
+    shopStatusError.textContent = error.message;
+    shopStatusError.hidden = false;
+  } finally {
+    shopOpenBtn.disabled = false;
+    shopClosedBtn.disabled = false;
+  }
 }
 
 /* =========================
@@ -1371,6 +1435,8 @@ function showLogin() {
 ========================= */
 
 refreshBtn.addEventListener("click", loadOrders);
+shopOpenBtn.addEventListener("click", () => updateShopStatus(true));
+shopClosedBtn.addEventListener("click", () => updateShopStatus(false));
 
 /* =========================
    HTML ESCAPING

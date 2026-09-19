@@ -1863,6 +1863,24 @@ footer {
   margin-top: 20px;
 }
 
+.shop-status-notice {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 13px 15px;
+  border: 1px solid #f0c8c8;
+  border-radius: var(--radius-md);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.shop-status-notice strong {
+  color: var(--text-strong);
+  font-size: 0.8rem;
+}
+
 .checkout-note {
   margin: 20px 0 0;
   color: var(--text-light);

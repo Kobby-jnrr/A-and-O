@@ -28,6 +28,7 @@ let deliveryLocation = {
 
 let trackingOrderNumber = "";
 let paystackOrderProcessing = false;
+let shopIsOpen = true;
 
 /* =========================================================
    DOM HELPERS
@@ -205,6 +206,28 @@ async function loadProducts() {
     if (productList)
       productList.innerHTML = `<p class="placeholder-note">${escapeHtml(error.message || "Products are unavailable right now. Please refresh and try again.")}</p>`;
   }
+}
+
+async function loadShopStatus() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/shop-status`);
+    if (!response.ok) throw new Error("Could not check shop status.");
+    const data = await response.json();
+    shopIsOpen = data.isOpen !== false;
+  } catch (error) {
+    console.error("Could not load shop status");
+    shopIsOpen = true;
+  }
+  renderShopStatus();
+}
+
+function renderShopStatus() {
+  const notice = $("#shopStatusNotice");
+  const submitButton = $("#submitOrderBtn");
+  if (!notice || !submitButton) return;
+  notice.hidden = shopIsOpen;
+  submitButton.disabled = !shopIsOpen;
+  submitButton.textContent = shopIsOpen ? "Pay & Place Order" : "Shop is closed";
 }
 
 function updateHeroAvailability(products) {
@@ -1816,6 +1839,12 @@ function validateOrderForm() {
 async function submitOrder(event) {
   event.preventDefault();
 
+  await loadShopStatus();
+  if (!shopIsOpen) {
+    showSmallNotice("The shop is currently closed. Please check back later.");
+    return;
+  }
+
   if (cart.length === 0) {
     showSmallNotice("Your order is empty. Please add something first.");
 
@@ -3300,7 +3329,7 @@ function initializeKeyboardEvents() {
 ========================================================= */
 
 async function initialize() {
-  await loadProducts();
+  await Promise.all([loadProducts(), loadShopStatus()]);
 
   renderCart();
 

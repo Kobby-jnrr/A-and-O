@@ -10,6 +10,15 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS shop_settings;
+
+CREATE TABLE shop_settings (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  is_open BOOLEAN NOT NULL DEFAULT TRUE,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO shop_settings (id, is_open) VALUES (1, TRUE);
 
 CREATE TABLE products (
   id TEXT PRIMARY KEY DEFAULT ('product-' || replace(gen_random_uuid()::text, '-', '')),

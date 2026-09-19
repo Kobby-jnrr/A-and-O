@@ -24,6 +24,13 @@ const PRODUCT_TYPES = [
 
 const PRODUCT_STATUSES = ["available", "out_of_stock", "unavailable"];
 
+async function getShopStatus() {
+  const result = await db.query(
+    "SELECT is_open FROM shop_settings WHERE id = 1 LIMIT 1",
+  );
+  return result.rows[0]?.is_open !== false;
+}
+
 function productForApi(row) {
   const config = row.config && typeof row.config === "object" ? row.config : {};
 
@@ -245,6 +252,53 @@ app.get("/", (req, res) => {
 });
 
 // ============================================================
+// SHOP STATUS
+// ============================================================
+
+app.get("/api/shop-status", async (req, res) => {
+  try {
+    res.json({ isOpen: await getShopStatus() });
+  } catch (error) {
+    console.error("Get shop status error");
+    res.status(500).json({ message: "We could not check shop availability." });
+  }
+});
+
+app.get("/api/admin/shop-status", authenticateToken, async (req, res) => {
+  try {
+    res.json({ isOpen: await getShopStatus() });
+  } catch (error) {
+    console.error("Get admin shop status error");
+    res.status(500).json({ message: "We could not load shop availability." });
+  }
+});
+
+app.patch("/api/admin/shop-status", authenticateToken, async (req, res) => {
+  try {
+    if (typeof req.body.isOpen !== "boolean") {
+      return res.status(400).json({ message: "Shop status must be open or closed." });
+    }
+
+    const result = await db.query(
+      `UPDATE shop_settings
+       SET is_open = $1, updated_at = CURRENT_TIMESTAMP
+       WHERE id = 1
+       RETURNING is_open`,
+      [req.body.isOpen],
+    );
+
+    if (!result.rows[0]) {
+      return res.status(500).json({ message: "Shop settings are not configured." });
+    }
+
+    res.json({ success: true, isOpen: result.rows[0].is_open });
+  } catch (error) {
+    console.error("Update shop status error");
+    res.status(500).json({ message: "We could not update shop availability." });
+  }
+});
+
+// ============================================================
 // PAYSTACK — VERIFY TRANSACTION (proxy for frontend polling)
 // ============================================================
 
@@ -303,6 +357,12 @@ app.post("/api/orders/init", async (req, res) => {
   let client;
 
   try {
+    if (!(await getShopStatus())) {
+      return res.status(409).json({
+        message: "The shop is currently closed. Please check back when we are open.",
+      });
+    }
+
     const {
       customerName,
       customerPhone,
@@ -645,6 +705,12 @@ app.post("/api/orders", async (req, res) => {
     const providedOrderNumber = req.body.orderNumber
       ? String(req.body.orderNumber).trim()
       : null;
+
+    if (!(await getShopStatus()) && !providedOrderNumber) {
+      return res.status(409).json({
+        message: "The shop is currently closed. Please check back when we are open.",
+      });
+    }
 
     if (!cleanCustomerName || !cleanCustomerPhone) {
       return res
